@@ -1,0 +1,24 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32210.238
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Autosar-Configurator", "Autosar-Configurator.csproj", "{023B3394-F347-4E7F-8332-3C39CFCA28E5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{023B3394-F347-4E7F-8332-3C39CFCA28E5}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{023B3394-F347-4E7F-8332-3C39CFCA28E5}.Debug|Any CPU.Build.0 = Debug|x86
+		{023B3394-F347-4E7F-8332-3C39CFCA28E5}.Release|Any CPU.ActiveCfg = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {53FB4B24-91E0-491E-B45B-97DD990C65BF}
+	EndGlobalSection
+EndGlobal
