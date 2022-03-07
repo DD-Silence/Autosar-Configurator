@@ -385,7 +385,7 @@ namespace Ecuc.EcucUi
             if (Text != Bswmd.AsrPathShort)
             {
                 Text = Bswmd.AsrPathShort;
-                Name = Bswmd.AsrPathShort;
+                Name = Bswmd.AsrPath;
             }
 
             if (datas.Count == 0)
@@ -470,11 +470,7 @@ namespace Ecuc.EcucUi
             if (Text != Data.Value)
             {
                 Text = Data.Value;
-            }
-
-            if (Name != Data.AsrPath)
-            {
-                Name = Data.AsrPath;
+                Name = Data.BswmdPath;
             }
 
             foreach (var subContainer in Data.SortedContainers)
@@ -515,9 +511,9 @@ namespace Ecuc.EcucUi
                     }
                     else
                     {
-                        if (Nodes.ContainsKey(subContainer.Key.AsrPathShort) == true)
+                        if (Nodes.ContainsKey(subContainer.Key.AsrPath) == true)
                         {
-                            var node = Nodes[subContainer.Key.AsrPathShort];
+                            var node = Nodes[subContainer.Key.AsrPath];
                             if (node is EcucContainersTreeNode containersNode)
                             {
                                 containersNode.UpdateUi(subContainer.Value);
