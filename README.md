@@ -59,6 +59,15 @@ It is not possible to deleta a required parameter.
 ![image](https://user-images.githubusercontent.com/101047683/157068411-41da383c-bbe9-4f69-9944-314a6ad6ae2d.png)  
 
 ### Add reference
+Here is a CAN controller and a CanIf CanIfCtrlCanCtrlRef container with CanIfCtrlCanCtrlRef reference to connect  
+these two container.
+![image](https://user-images.githubusercontent.com/101047683/157070591-3803a6d3-d9c9-4ea1-8729-75ba4282cfa7.png)
+Right click and choose Create Paraemter item.
+![image](https://user-images.githubusercontent.com/101047683/157070986-a237a518-ba47-44cc-bd0c-8a0e2da73597.png)
+A form with candidate items is popup and choose CAN controller want to link and double click.
+![image](https://user-images.githubusercontent.com/101047683/157071246-240331a3-ff82-4d44-8959-5a3b88440220.png)
+The reference link is created.
+![image](https://user-images.githubusercontent.com/101047683/157071379-34005656-c669-41d3-94ee-b465d9ea4d63.png)
 
 ### Delete reference
 
