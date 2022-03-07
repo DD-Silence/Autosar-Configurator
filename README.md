@@ -37,12 +37,18 @@ Required paramters in required container are also created.
 ![image](https://user-images.githubusercontent.com/101047683/157065217-9cf4e6ca-cb72-47ae-bf62-4744536ae50f.png)  
 
 ### Delete option container
-Right click the container ant to delete and click Delete item.  
+Right click the container and click Delete item.  
 ![image](https://user-images.githubusercontent.com/101047683/157065792-090ab999-6b6b-41b9-aafb-4ba18b448aba.png)  
 The container want to delete is deleted.  
 ![image](https://user-images.githubusercontent.com/101047683/157066041-8a9414cf-b3db-475c-899a-8ed1ae8db932.png)  
 
 ### Add option parameter
+These disable TextBox is option parameter in container. Right clck it and click Create Parameter item.  
+![image](https://user-images.githubusercontent.com/101047683/157066652-97e2267c-a068-42b2-9bc6-5de789bdf994.png)  
+The parameter is enabled with default value.
+![image](https://user-images.githubusercontent.com/101047683/157067230-93c0f28e-6d8e-4bab-99e4-a0a5bd22751c.png)
+Change it is also possible with candidate value.  
+![image](https://user-images.githubusercontent.com/101047683/157067403-b9c6fc5c-08cc-4f32-95da-4e2d8934d005.png)  
 
 ### Delete option parameter
 
