@@ -385,7 +385,7 @@ namespace Ecuc.EcucUi
             if (Text != Bswmd.AsrPathShort)
             {
                 Text = Bswmd.AsrPathShort;
-                Name = Bswmd.AsrPath;
+                Name = Bswmd.AsrPathShort;
             }
 
             if (datas.Count == 0)
@@ -470,16 +470,32 @@ namespace Ecuc.EcucUi
             if (Text != Data.Value)
             {
                 Text = Data.Value;
-                Name = Data.BswmdPath;
+                Name = Data.AsrPath;
             }
 
             foreach (var subContainer in Data.SortedContainers)
             {
                 if (subContainer.Value.Count == 0)
                 {
-                    if (Nodes.ContainsKey(subContainer.Key.AsrPath) == true)
+                    if (subContainer.Key.IsSingle == true)
                     {
-                        Nodes.RemoveByKey(subContainer.Key.AsrPath);
+                        foreach (TreeNode node in Nodes)
+                        {
+                            if (node is EcucContainerTreeNode containerNode)
+                            {
+                                if (containerNode.Data.BswmdPathShort == subContainer.Key.AsrPathShort)
+                                {
+                                    Nodes.Remove(node);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (Nodes.ContainsKey(subContainer.Key.AsrPathShort) == true)
+                        {
+                            Nodes.RemoveByKey(subContainer.Key.AsrPathShort);
+                        }
                     }
                 }
                 else
@@ -488,9 +504,9 @@ namespace Ecuc.EcucUi
                     {
                         if (subContainer.Value.Count == 1)
                         {
-                            if (Nodes.ContainsKey(subContainer.Key.AsrPath) == true)
+                            if (Nodes.ContainsKey(subContainer.Value.First.AsrPath) == true)
                             {
-                                var node = Nodes[subContainer.Key.AsrPath];
+                                var node = Nodes[subContainer.Value.First.AsrPath];
                                 if (node is EcucContainerTreeNode containerNode)
                                 {
                                     containerNode.UpdateUi(subContainer.Value[0]);
@@ -501,19 +517,12 @@ namespace Ecuc.EcucUi
                                 Nodes.Add(new EcucContainerTreeNode(subContainer.Value[0]));
                             }
                         }
-                        else
-                        {
-                            if (Nodes.ContainsKey(subContainer.Key.AsrPath) == true)
-                            {
-                                Nodes.Remove(Nodes[subContainer.Key.AsrPath]);
-                            }
-                        }
                     }
                     else
                     {
-                        if (Nodes.ContainsKey(subContainer.Key.AsrPath) == true)
+                        if (Nodes.ContainsKey(subContainer.Key.AsrPathShort) == true)
                         {
-                            var node = Nodes[subContainer.Key.AsrPath];
+                            var node = Nodes[subContainer.Key.AsrPathShort];
                             if (node is EcucContainersTreeNode containersNode)
                             {
                                 containersNode.UpdateUi(subContainer.Value);
