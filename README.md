@@ -44,13 +44,19 @@ The container want to delete is deleted.
 
 ### Add option parameter
 These disable TextBox is option parameter in container. Right clck it and click Create Parameter item.  
-![image](https://user-images.githubusercontent.com/101047683/157066652-97e2267c-a068-42b2-9bc6-5de789bdf994.png)  
+![image](https://user-images.githubusercontent.com/101047683/157067885-ea4b4cd7-c15f-4463-8360-bfe79430b82d.png)  
 The parameter is enabled with default value.
 ![image](https://user-images.githubusercontent.com/101047683/157067230-93c0f28e-6d8e-4bab-99e4-a0a5bd22751c.png)
 Change it is also possible with candidate value.  
 ![image](https://user-images.githubusercontent.com/101047683/157067403-b9c6fc5c-08cc-4f32-95da-4e2d8934d005.png)  
 
 ### Delete option parameter
+Enabled parameter can be deleted. Right click parameter and click Delete Parameter item.  
+![image](https://user-images.githubusercontent.com/101047683/157068110-00ebd78f-f9b2-4500-bdd8-e087504b08e1.png)  
+Parameter back to disabled status.  
+![image](https://user-images.githubusercontent.com/101047683/157068217-568f1dd4-75c9-44a0-9aa7-30ca0f7917ec.png)
+It is not possible to deleta a required parameter.  
+![image](https://user-images.githubusercontent.com/101047683/157068411-41da383c-bbe9-4f69-9944-314a6ad6ae2d.png)  
 
 ### Add reference
 
