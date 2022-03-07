@@ -195,8 +195,6 @@ namespace AutosarConfigurator
                 tbBswmd.Text = "data/bswmd";
 #endif
                 config.AppSettings.Settings.Add("BSWMD_PATH", tbBswmd.Text);
-
-
             }
 
             try
@@ -208,8 +206,9 @@ namespace AutosarConfigurator
 #if DEBUG
                 tbInstance.Text = "../../../../data/instance";
 #else
-                config.AppSettings.Settings.Add("INSTANCE_PATH", tbInstance.Text);
+                tbBswmd.Text = "data/instance";
 #endif
+                config.AppSettings.Settings.Add("INSTANCE_PATH", tbInstance.Text);
             }
 
             try
