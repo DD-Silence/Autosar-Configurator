@@ -29,6 +29,12 @@ Generate folder is not finished, it is useless now.
 ---
 ## Operations
 ### Add container
+Right click and move to Add item. Wait to choose container want to add.  
+![image](https://user-images.githubusercontent.com/101047683/157063201-78ee49da-be98-407b-9018-34953f55fc66.png)  
+Whole path of container with required subcontainers are add.  
+![image](https://user-images.githubusercontent.com/101047683/157063599-33fa39f2-a04a-4a90-98f3-2ff89ed1ce79.png)  
+Required paramters in required container are also created.
+![image](https://user-images.githubusercontent.com/101047683/157065217-9cf4e6ca-cb72-47ae-bf62-4744536ae50f.png)
 
 ### Delete option container
 
