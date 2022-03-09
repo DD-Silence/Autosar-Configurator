@@ -8,6 +8,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>x86</Platforms>
+    <AssemblyVersion>1.0.1</AssemblyVersion>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <SignAssembly>False</SignAssembly>
+    <Company>Dai Jin Shi -- ddsilence@sina.cn</Company>
+    <Copyright>Dai Jin Shi -- ddsilence@sina.cn All right reserved</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
