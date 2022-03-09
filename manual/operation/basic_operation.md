@@ -41,6 +41,10 @@ The reference link is created.
 ![image](https://user-images.githubusercontent.com/101047683/157071379-34005656-c669-41d3-94ee-b465d9ea4d63.png)
 
 ### Delete reference
+If reference can be deleted, right click on reference and click Delete Paremeter item.  
+![image](https://user-images.githubusercontent.com/101047683/157459532-6ddc6847-79ad-4282-9639-8be9d14f7dc5.png)  
+The reference can be deleted.  
+![image](https://user-images.githubusercontent.com/101047683/157459797-12769372-1d14-4fcc-b7c4-6abd36290859.png)  
 
 ### Find referenced parameter or container
 
