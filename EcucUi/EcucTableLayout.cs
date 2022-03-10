@@ -866,6 +866,7 @@ namespace Ecuc.EcucUi
                 {
                     cmCreate.Visible = false;
                     cmDelete.Visible = false;
+                    cmDeRef.Visible = false;
                     return;
                 }
 
@@ -907,6 +908,7 @@ namespace Ecuc.EcucUi
                     {
                         cmCreate.Visible = true;
                         cmDelete.Visible = false;
+                        cmDeRef.Visible = false;
                         cmCreate.Tag = element;
                     }
                 }
