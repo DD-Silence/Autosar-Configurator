@@ -361,11 +361,49 @@ namespace Ecuc.EcucUi
     {
         public IEcucBswmdModule Bswmd;
         public EcucDataList Datas { get; private set; }
+        private bool valid = false;
+
+        public bool Valid
+        {
+            get
+            {
+                return valid;
+            }
+            set
+            {
+                if (valid == value)
+                {
+                    return;
+                }
+
+                valid = value;
+                if (Parent != null)
+                {
+                    if (Parent is EcucContainersTreeNode containers)
+                    {
+                        containers.Valid = value;
+                    }
+                    else if(Parent is EcucContainerTreeNode container)
+                    {
+                        container.Valid = value;
+                    }
+                }
+                if (valid == false)
+                {
+                    ForeColor = Color.Red;
+                }
+                else
+                {
+                    ForeColor = Color.Black;
+                }
+            }
+        }
 
         public EcucContainersTreeNode(IEcucBswmdModule bswmd, EcucDataList datas)
         {
             Bswmd = bswmd;
             Datas = datas;
+            Valid = datas.Valid;
 
             UpdateUi(datas);
         }
@@ -446,11 +484,50 @@ namespace Ecuc.EcucUi
             }
         }
 
+        private bool valid = false;
+
+        public bool Valid
+        {
+            get
+            {
+                return valid;
+            }
+            set
+            {
+                if (valid == value)
+                {
+                    return;
+                }
+
+                valid = value;
+                if (Parent != null)
+                {
+                    if (Parent is EcucContainersTreeNode containers)
+                    {
+                        containers.Valid = value;
+                    }
+                    else if (Parent is EcucContainerTreeNode container)
+                    {
+                        container.Valid = value;
+                    }
+                }
+                if (valid == false)
+                {
+                    ForeColor = Color.Red;
+                }
+                else
+                {
+                    ForeColor = Color.Black;
+                }
+            }
+        }
+
         public EcucContainerTreeNode(EcucData data)
         {
             Data = data;
             Data.PropertyChanged += PropertyChangedEventHandler;
             Name = Data.AsrPath;
+            Valid = data.Valid;
 
             UpdateUi();
         }
@@ -560,6 +637,11 @@ namespace Ecuc.EcucUi
             {
                 Text = Data.Value;
                 Name = Data.AsrPath;
+            }
+
+            if (e.PropertyName == "Valid" || e.PropertyName == "PropertyChangedEventHandler")
+            {
+                Valid = Data.Valid;
             }
         }
     }
