@@ -47,14 +47,48 @@ The reference can be deleted.
 ![image](https://user-images.githubusercontent.com/101047683/157459797-12769372-1d14-4fcc-b7c4-6abd36290859.png)  
 
 ### Find referenced parameter or container
+On a reference, right click and choose Find Reference item.  
+![image](https://user-images.githubusercontent.com/101047683/159148935-4fbb60b3-2f7f-4888-8515-f4ac44ffae9e.png)  
+Then focus will navigate to the referenced parameter or container.  
+![image](https://user-images.githubusercontent.com/101047683/159148954-378500f1-9111-415f-a420-5ad2e00be755.png)  
 
 ### Find Usage of container
+On node of container, right click and choose Usage item.  
+![image](https://user-images.githubusercontent.com/101047683/159148992-3fe09710-acd3-43dc-a64a-9ddbfe639599.png)  
+Then focus will navigate to the container reference the first container.  
+![image](https://user-images.githubusercontent.com/101047683/159149021-d26718a4-10a4-4970-97c6-1e3b6fa069dc.png)  
 
 ### Save changes
+Click File menu and choose Save item to save configurations in arxml.  
+![image](https://user-images.githubusercontent.com/101047683/159149059-fa1a2724-fd37-438f-b66b-cf4017412e31.png)  
 
 ### Reload UI
+Click File menu and choose Reload item to reload ui.  
+![image](https://user-images.githubusercontent.com/101047683/159149083-490277d0-05cd-4e91-8abf-b4374ff45d2b.png)  
 
 ### Run Script and get result
+Click Script menu and choose the script you want to execute.  
+![image](https://user-images.githubusercontent.com/101047683/159149110-c487dc80-e082-4a31-be30-63805816783d.png)  
+After execution of the script. Result will be shown in Console.  
+![image](https://user-images.githubusercontent.com/101047683/159149128-c6211f11-8e0e-458f-acd2-87ea986e2211.png)  
+If the script contains validation result, the wrong container and parameter will shown as red color.  
+![image](https://user-images.githubusercontent.com/101047683/159149177-39a4b3d3-6fb1-4e9d-99b2-39f934b1ee7c.png)  
+Hover on the red node or parameter, validtion result will be shown.  
+Parameter validation result  
+![image](https://user-images.githubusercontent.com/101047683/159149207-fdda5d2c-88e2-4b56-8918-ec0eb897d0e8.png)  
+Container validation result  
+![image](https://user-images.githubusercontent.com/101047683/159149223-5e9636c6-e13c-4591-9fc2-55df081c5779.png)  
+The validation result are summarized in Validation windown.  
+The summary is based on module.  
+![image](https://user-images.githubusercontent.com/101047683/159149251-4ae26cd7-ea36-4e10-80a2-1b2bb34f6bee.png)  
+Right click on each item can get Navigate and Solve item.  
+![image](https://user-images.githubusercontent.com/101047683/159149277-8914a186-2721-47f3-a298-e26abda9e3c5.png)  
+Click Navigate item will focus to the validated container.  
+![image](https://user-images.githubusercontent.com/101047683/159149303-55c8cf8d-8c5d-4010-8541-46a27ecc3fab.png)  
+Click Solve item will call script to solve the problem.  
+![image](https://user-images.githubusercontent.com/101047683/159149333-cfdb1f4a-7099-4a49-a626-ced281e97c0b.png)  
+The container will also turn to black to show the problem is fixed.  
+![image](https://user-images.githubusercontent.com/101047683/159149373-3ec5ff03-5927-4d79-8d08-53181f5c1925.png)  
 
 ---
 ## Customize bswmd arxml to create custom Autosar module
