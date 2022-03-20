@@ -68,7 +68,7 @@ Click File menu and choose Reload item to reload ui.
 
 ### Run Script and get result
 Click Script menu and choose the script you want to execute.  
-![image](https://user-images.githubusercontent.com/101047683/159149629-a1add25e-16fa-4972-89e8-149af07e2157.png)
+![image](https://user-images.githubusercontent.com/101047683/159149629-a1add25e-16fa-4972-89e8-149af07e2157.png)  
 After execution of the script. Result will be shown in Console.  
 ![image](https://user-images.githubusercontent.com/101047683/159149128-c6211f11-8e0e-458f-acd2-87ea986e2211.png)  
 If the script contains validation result, the wrong container and parameter will shown as red color.  
