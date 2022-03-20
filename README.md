@@ -1,9 +1,11 @@
 # Autosar-Configurator
     First open source Autosar compliant configurator with the following features,
     * Fast and low memory usage.
-    * Compliant with Vector, EB, Mentor SIP package. Review arxml from SIP as well as Autosar.
-    * Similar operation logic with Vector Davincci tool chain. 
+    * Compliant with Vector, Mentor SIP package. Review arxml from SIP as well as Autosar.
+    * Similar operation logic with Vector Davincci tool chain.
     * Add, delete, modify and save containers and parameters by GUI and script.
+    * Validation support by script to mention user wrong parameter.
+    * Solve is possible by script to correct wrong parameter.
     * Customize Autosar model and operate like origin model.
     
 Autosar Configurator is not based on Artop as others do. It is fully constructed on existing C# infrastructure of XSD, XML and Linq handing. The speed is much faster than eclipse based soultion. Fifty arxml can be opened in less than 5 seconds and memory is less than 200 M bytes after opening fifty arxmls. 
