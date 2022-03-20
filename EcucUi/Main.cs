@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 Dai Jin Shi E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,11 +18,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
 using System.Configuration;
-using System.IO;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using CSScriptLib;
 using Ecuc.EcucBase.EBswmd;
 using Ecuc.EcucBase.EInstance;
@@ -30,42 +26,102 @@ using Ecuc.EcucUi;
 
 namespace AutosarConfigurator
 {
+    /// <summary>
+    /// Main form.
+    /// </summary>
     public partial class WdMain : Form
     {
-        private EcucInstanceManager instanceManager;
-        private EcucBswmdManager bswmdManager;
-        private EcucTableLayout tpValue;
-        private EcucTreeView tvModel;
-        private Reference wdReference;
+        /// <summary>
+        /// Data source of instance manager.
+        /// </summary>
+        private EcucInstanceManager? instanceManager;
+        /// <summary>
+        /// Data source of bswmd manager.
+        /// </summary>
+        private EcucBswmdManager? bswmdManager;
+        /// <summary>
+        /// EcucTableLayout to display parameter.
+        /// </summary>
+        private EcucTableLayout? tpValue;
+        /// <summary>
+        /// TreeView of model.
+        /// </summary>
+        private EcucModelTreeView? tvModel;
+        /// <summary>
+        /// TreeView of validation.
+        /// </summary>
+        private EcucValidationTreeView? tvValidation;
+        /// <summary>
+        /// Reference form.
+        /// </summary>
+        private Reference? wdReference;
 
+        /// <summary>
+        /// Main form.
+        /// </summary>
         public WdMain()
         {
             InitializeComponent();
-            Console.SetOut(new ConsoleRichTextBox(rtStatus));
+            // Redirect console output to ConsoleRichTextBox
+            Console.SetOut(new ConsoleRichTextBox(rtScript));
+            // Read configuration
             HandleConfiguration();
         }
 
+        /// <summary>
+        /// Create EcucTableLayout.
+        /// </summary>
         private void CreateTabelLayoutPanel()
         {
             splitContainer2.Panel2.Controls.Clear();
-            tpValue = new EcucTableLayout(rtDesc, wdReference);
-            splitContainer2.Panel2.Controls.Add(tpValue);
+            if (wdReference != null)
+            {
+                tpValue = new EcucTableLayout(rtDesc, wdReference);
+                splitContainer2.Panel2.Controls.Add(tpValue);
+            }
         }
 
-        private void CreateTreeView()
+        /// <summary>
+        /// Create tree view of model.
+        /// </summary>
+        private void CreateModelTreeView()
         {
             splitContainer2.Panel1.Controls.Clear();
-            tvModel = new EcucTreeView(instanceManager, bswmdManager, rtDesc, tpValue);
-            splitContainer2.Panel1.Controls.Add(tvModel);
+            if (instanceManager != null && bswmdManager != null && tpValue != null)
+            {
+                tvModel = new EcucModelTreeView(instanceManager, bswmdManager, rtDesc, tpValue);
+                splitContainer2.Panel1.Controls.Add(tvModel);
+            }
         }
 
+        /// <summary>
+        /// Create tree view of validation.
+        /// </summary>
+        private void CreateValidationTreeView()
+        {
+            if (instanceManager != null && bswmdManager != null && tvModel != null)
+            {
+                tpValid.Controls.Clear();
+                tvValidation = new EcucValidationTreeView(instanceManager, bswmdManager, tvModel);
+                tpValid.Controls.Add(tvValidation);
+            }
+        }
+
+        /// <summary>
+        /// Create script menu according to script folder arrangement.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="items"></param>
         private void CreateScriptMenu(string path, ToolStripItemCollection items)
         {
             var directories = Directory.GetDirectories(path);
             foreach (var d in directories)
             {
                 ToolStripItem item = items.Add(d.Split("\\")[^1]);
-                CreateScriptMenu(d, (item as ToolStripMenuItem).DropDownItems);
+                if (item is ToolStripMenuItem menuItem)
+                {
+                    CreateScriptMenu(d, menuItem.DropDownItems);
+                }
             }
 
             var files = Directory.GetFiles(path, "*.cs");
@@ -77,6 +133,9 @@ namespace AutosarConfigurator
             }
         }
 
+        /// <summary>
+        /// Reload operation.
+        /// </summary>
         private void RefreshAll()
         {
             GC.Collect();
@@ -86,9 +145,13 @@ namespace AutosarConfigurator
             wdReference = new Reference(instanceManager);
 
             CreateTabelLayoutPanel();
-            CreateTreeView();
-            tpValue.AddTreeNodes(tvModel.Nodes[0].Nodes);
+            CreateModelTreeView();
+            if (tpValue != null && tvModel != null)
+            {
+                tpValue.AddTreeNodes(tvModel.Nodes[0].Nodes);
+            }
             mnScript.DropDownItems.Clear();
+            CreateValidationTreeView();
 #if DEBUG
             CreateScriptMenu("../../../../data/script", mnScript.DropDownItems);
 #else
@@ -96,21 +159,37 @@ namespace AutosarConfigurator
 #endif
         }
 
+        /// <summary>
+        /// Form load event handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used.</param>
         private void WdMain_Load(object sender, EventArgs e)
         {
             RefreshAll();
         }
 
+        /// <summary>
+        /// Get all bswmd files from specified foler.
+        /// </summary>
+        /// <returns>Paths of all bswmd files.</returns>
         private string[] GetAllBswmdFiles()
         {
             return Directory.GetFiles(tbBswmd.Text, "*.arxml");
         }
 
+        /// <summary>
+        /// Get all instance files from specified foler.
+        /// </summary>
+        /// <returns>Paths of all instance files.</returns>
         private string[] GetAllInstanceFiles()
         {
             return Directory.GetFiles(tbInstance.Text, "*.arxml");
         }
 
+        /// <summary>
+        /// Save config of form.
+        /// </summary>
         private void SaveConfiguration()
         {
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
@@ -180,6 +259,9 @@ namespace AutosarConfigurator
             ConfigurationManager.RefreshSection("appSettings");
         }
 
+        /// <summary>
+        /// Handle config of form.
+        /// </summary>
         private void HandleConfiguration()
         {
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
@@ -260,6 +342,11 @@ namespace AutosarConfigurator
             ConfigurationManager.RefreshSection("appSettings");
         }
 
+        /// <summary>
+        /// Button of bswmd folder change.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used</param>
         private void BtBswmd_Click(object sender, EventArgs e)
         {
             fdMain.RootFolder = Environment.SpecialFolder.LocalApplicationData;
@@ -270,6 +357,11 @@ namespace AutosarConfigurator
             }
         }
 
+        /// <summary>
+        /// Button of instance folder change.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used</param>
         private void BtInstance_Click(object sender, EventArgs e)
         {
             fdMain.RootFolder = Environment.SpecialFolder.LocalApplicationData;
@@ -280,22 +372,45 @@ namespace AutosarConfigurator
             }
         }
 
+        /// <summary>
+        /// Save menu item click handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used</param>
         private void MnSave_Click(object sender, EventArgs e)
         {
-            instanceManager.Save();
+            if (instanceManager != null)
+            {
+                instanceManager.Save();
+            }
         }
 
+        /// <summary>
+        /// Reload menu item click handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used</param>
         private void MnReload_Click(object sender, EventArgs e)
         {
             RefreshAll();
         }
 
+        /// <summary>
+        /// Quit menu item click handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used</param>
         private void QuitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Close();
         }
 
-        private void MnScriptClickEventHandler(object sender, MouseEventArgs e)
+        /// <summary>
+        /// Script menu item click handler.
+        /// </summary>
+        /// <param name="sender">Menu item clicked</param>
+        /// <param name="e">Mouse event.</param>
+        private void MnScriptClickEventHandler(object? sender, MouseEventArgs e)
         {
             if (sender is ToolStripMenuItem item)
             {
@@ -304,24 +419,26 @@ namespace AutosarConfigurator
                     CSScript.CacheEnabled = false;
                     dynamic script = CSScript.Evaluator.LoadFile(file);
                     Console.WriteLine($"Start to execute script {file}");
-                    Task.Run(() =>
+                    try
                     {
-                        try
-                        {
-                            GC.Collect();
-                            script.ScriptRun(bswmdManager, instanceManager);
-                            Console.WriteLine($"Script {file} execute sucessfully");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Script {file} execute fail with exception:");
-                            Console.WriteLine($"{ex.Message}");
-                        }
-                    });
+                        GC.Collect();
+                        script.ScriptRun(bswmdManager, instanceManager);
+                        Console.WriteLine($"Script {file} execute sucessfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Script {file} execute fail with exception:");
+                        Console.WriteLine($"{ex.Message}");
+                    }
                 }
             }
         }
 
+        /// <summary>
+        /// Form closing event handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used.</param>
         private void WdMain_FormClosing(object sender, FormClosingEventArgs e)
         {
             SaveConfiguration();

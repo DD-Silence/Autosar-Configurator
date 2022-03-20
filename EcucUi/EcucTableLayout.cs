@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 Dai Jin Shi E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 using Ecuc.EcucBase.EBswmd;
 using Ecuc.EcucBase.EData;
 using Ecuc.EcucBase.EInstance;
+using System.ComponentModel;
 
 namespace Ecuc.EcucUi
 {
@@ -69,6 +70,10 @@ namespace Ecuc.EcucUi
         /// DeRef menu item for reference lookup.
         /// </summary>
         private readonly ToolStripMenuItem cmDeRef;
+        /// <summary>
+        /// Valid tooltip.
+        /// </summary>
+        private readonly ToolTip ttValid;
 
         /// <summary>
         /// Initialize EcucTableLayout.
@@ -124,6 +129,8 @@ namespace Ecuc.EcucUi
             cmDeRef.Text = "Find Reference";
             cmDeRef.Visible = false;
             ContextMenuStrip = cm;
+
+            ttValid = new ToolTip();
         }
 
         /// <summary>
@@ -200,6 +207,8 @@ namespace Ecuc.EcucUi
             Bswmd = null;
             Datas = null;
             Data = data;
+            Data.PropertyChanged += DataChangeEventHandler;
+
             // Preparations
             Visible = false;
             Controls.Clear();
@@ -301,11 +310,16 @@ namespace Ecuc.EcucUi
             {
                 AutoSize = true,
                 Text = ui.Title,
+                ForeColor = ui.Datas.ValidStatus ? Color.Black : Color.Red,
                 Tag = ui,
                 Enabled = ui.Exist,
                 Name = $"lb_{ui.Title}"
             };
             lb.MouseDown += ChildMouseDownEventHandler;
+            if (ui.Datas.ValidStatus == false)
+            {
+                ttValid.SetToolTip(lb, ui.Datas.ValidInfo);
+            }
             Controls.Add(lb);
 
             // Differnet kind of control for content of parameter
@@ -436,11 +450,16 @@ namespace Ecuc.EcucUi
             {
                 AutoSize = true,
                 Text = ui.Title,
+                ForeColor = ui.Datas.ValidStatus ? Color.Black : Color.Red,
                 Tag = ui,
                 Enabled = ui.Exist,
                 Name = $"lb_{ui.Title}"
             };
             lb.MouseDown += ChildMouseDownEventHandler;
+            if (ui.Datas.ValidStatus == false)
+            {
+                ttValid.SetToolTip(lb, ui.Datas.ValidInfo);
+            }
             Controls.Add(lb);
 
             // Different control for different type of reference
@@ -490,6 +509,11 @@ namespace Ecuc.EcucUi
                 return;
             }
 
+            if (Data.InstanceType == typeof(EcucInstanceModule))
+            {
+                return;
+            }
+
             // Iterate all parameters in container
             foreach (var para in Data.SortedParas)
             {
@@ -521,7 +545,7 @@ namespace Ecuc.EcucUi
                     continue;
                 }
 
-                // Update others
+                // Update reference
                 if (status.Ok && !status.Empty)
                 {
                     UpdateRefUi(new TableLayoutPanelElementRef(reference.Key, reference.Value, true));
@@ -533,22 +557,36 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Update parameter ui.
+        /// </summary>
+        /// <param name="ui">Paremter ui data.</param>
+        /// <exception cref="Exception">Can not find related Label.</exception>
         private void UpdateParaUi(TableLayoutPanelElementPara ui)
         {
+            // Find label
             var ctrl = Controls[$"lb_{ui.Title}"];
             if (ctrl != null)
             {
+                // Update label
                 ctrl.Tag = ui;
                 ctrl.Enabled = ui.Exist;
+                ctrl.ForeColor = ui.Datas.ValidStatus ? Color.Black : Color.Red;
+                if (ui.Datas.ValidStatus == false)
+                {
+                    ttValid.SetToolTip(ctrl, ui.Datas.ValidInfo);
+                }
             }
             else
             {
                 throw new Exception($"Can not find label {ui.Title}");
             }
 
+            // Find content control
             ctrl = Controls[ui.Title];
             if (ctrl != null)
             {
+                // Update content control according to different type
                 ctrl.Tag = ui;
                 switch (ui.Type)
                 {
@@ -623,22 +661,47 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Data changed handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used.</param>
+        private void DataChangeEventHandler(object? sender, PropertyChangedEventArgs e)
+        {
+            // Update ui when data changed
+            UpdateUi();
+        }
+
+        /// <summary>
+        /// Updata reference ui
+        /// </summary>
+        /// <param name="ui">Reference ui data.</param>
+        /// <exception cref="Exception">Can not find related Label.</exception>
         private void UpdateRefUi(TableLayoutPanelElementRef ui)
         {
+            // Find label
             var ctrl = Controls[$"lb_{ui.Title}"];
             if (ctrl != null)
             {
+                // Update label
                 ctrl.Tag = ui;
                 ctrl.Enabled = ui.Exist;
+                ctrl.ForeColor = ui.Datas.ValidStatus ? Color.Black : Color.Red;
+                if (ui.Datas.ValidStatus == false)
+                {
+                    ttValid.SetToolTip(ctrl, ui.Datas.ValidInfo);
+                }
             }
             else
             {
                 throw new Exception($"Can not find label {ui.Title}");
             }
 
+            // Find content control
             ctrl = Controls[ui.Title];
             if (ctrl != null)
             {
+                // Update content control
                 ctrl.Tag = ui;
                 if (ui.Multiply == false)
                 {
@@ -668,6 +731,11 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Mouse click handler.
+        /// </summary>
+        /// <param name="sender">Clicked control.</param>
+        /// <param name="e">Mouse event.</param>
         private void ChildMouseDownEventHandler(object? sender, MouseEventArgs e)
         {
             if (sender is Control ctrl)
@@ -676,23 +744,27 @@ namespace Ecuc.EcucUi
                 {
                     var bswmd = element.Bswmd;
 
+                    // Prepare meta infomation of bswmd
                     rtDesc.Clear();
                     if (bswmd == null)
                     {
                         return;
                     }
-                    rtDesc.Text += $"Name: {bswmd.ShortName}\r\n";
-                    rtDesc.Text += $"Description: { bswmd.Desc}\r\n";
-                    rtDesc.Text += $"Lower Multiplicity: { bswmd.Lower}\r\n";
+                    rtDesc.Text += $"Name: {bswmd.ShortName}{Environment.NewLine}";
+                    rtDesc.Text += $"Description: {bswmd.Desc}{Environment.NewLine}";
+                    rtDesc.Text += $"Trace: {bswmd.Trace}{Environment.NewLine}";
+                    rtDesc.Text += $"Lower Multiplicity: {bswmd.Lower}{Environment.NewLine}";
                     if (bswmd.Upper == int.MaxValue)
                     {
-                        rtDesc.Text += $"Upper Multiplicity: Inf\r\n";
+                        rtDesc.Text += $"Upper Multiplicity: Inf{Environment.NewLine}";
                     }
                     else
                     {
-                        rtDesc.Text += $"Upper Multiplicity: {bswmd.Upper}\r\n";
+                        rtDesc.Text += $"Upper Multiplicity: {bswmd.Upper}{Environment.NewLine}";
                     }
-
+                    rtDesc.Text += $"BSWMD Path: {bswmd.AsrPath}{Environment.NewLine}";
+                    
+                    // Prepare create and delete popup menu item
                     if (element.Exist == true)
                     {
                         cmCreate.Visible = false;
@@ -713,6 +785,7 @@ namespace Ecuc.EcucUi
                         cmCreate.Tag = element;
                     }
 
+                    // Prepare de-reference popup menu item
                     if (element is TableLayoutPanelElementRef elementRef)
                     {
                         cmDeRef.Visible = true;
@@ -721,7 +794,7 @@ namespace Ecuc.EcucUi
                         {
                             var item = cmDeRef.DropDownItems.Add(data.Value);
                             item.Tag = data;
-                            item.MouseDown += CmDefItemClickEventHandler;
+                            item.MouseDown += CmDeRefItemClickEventHandler;
                         }
                     }
                     else
@@ -733,7 +806,12 @@ namespace Ecuc.EcucUi
             }
         }
 
-        private void CmDefItemClickEventHandler(object? sender, MouseEventArgs e)
+        /// <summary>
+        /// De-reference menu item click handler.
+        /// </summary>
+        /// <param name="sender">Clicked de-reference menu item.</param>
+        /// <param name="e">Mouse event.</param>
+        private void CmDeRefItemClickEventHandler(object? sender, MouseEventArgs e)
         {
             if (sender is ToolStripItem toolStripItem)
             {
@@ -741,6 +819,7 @@ namespace Ecuc.EcucUi
                 {
                     try
                     {
+                        // De-reference and select it
                         var deref = data.DeRef();
                         if (treeNodes != null)
                         {
@@ -755,6 +834,15 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Expand all parent of node with name "name".
+        /// </summary>
+        /// <param name="nodes">Start nodes.</param>
+        /// <param name="name">Name of node expanded.</param>
+        /// <returns>
+        ///     true: Expaned node is child of this node.
+        ///     false: Expaned node is not child of this node.
+        /// </returns>
         private bool ExpandAllNodes(TreeNodeCollection nodes, string name)
         {
             foreach (TreeNode node in nodes)
@@ -785,6 +873,11 @@ namespace Ecuc.EcucUi
             return false;
         }
 
+        /// <summary>
+        /// Mouse double click handler of reference textbox.
+        /// </summary>
+        /// <param name="sender">Textbox clicked.</param>
+        /// <param name="e">Mouse event.</param>
         private void RefMouseDoubleClickEventHandler(object? sender, MouseEventArgs e)
         {
             if (sender is TextBox tb)
@@ -793,8 +886,10 @@ namespace Ecuc.EcucUi
                 {
                     if (element.Datas.Count > 0)
                     {
+                        // Have data and prepare data for reference form
                         wdReference.Tag = new KeyValuePair<IEcucBswmdBase, EcucDataList>(element.Bswmd, element.Datas);
                         wdReference.ShowDialog();
+                        // Get result from reference form and update ui
                         if (wdReference.Tag is Dictionary<string, List<string>> referenceDict)
                         {
                             if (Data != null)
@@ -808,6 +903,11 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Create menu item handler.
+        /// </summary>
+        /// <param name="sender">Create menu item.</param>
+        /// <param name="e">Mouse event.</param>
         private void CmCreateHandler(object? sender, MouseEventArgs e)
         {
             if (sender is ToolStripMenuItem item)
@@ -818,10 +918,12 @@ namespace Ecuc.EcucUi
                     {
                         if (element is TableLayoutPanelElementPara)
                         {
+                            // Add parameter
                             Data.AddPara(element.Bswmd.AsrPathShort);
                         }
                         else
                         {
+                            // Add reference
                             wdReference.Tag = new KeyValuePair<IEcucBswmdBase, EcucDataList>(element.Bswmd, element.Datas);
                             wdReference.ShowDialog();
                             if (wdReference.Tag is Dictionary<string, List<string>> referenceDict)
@@ -829,12 +931,18 @@ namespace Ecuc.EcucUi
                                 Data.AddRef(element.Bswmd.AsrPathShort, referenceDict.First().Value.First(), referenceDict.First().Key);
                             }
                         }
+                        // Update ui
                         UpdateUi();
                     }
                 }
             }
         }
 
+        /// <summary>
+        /// Delete menu item handler.
+        /// </summary>
+        /// <param name="sender">Delete menu item.</param>
+        /// <param name="e">Mouse event.</param>
         private void CmDeleteHandler(object? sender, MouseEventArgs e)
         {
             if (sender is ToolStripMenuItem item)
@@ -845,22 +953,31 @@ namespace Ecuc.EcucUi
                     {
                         if (element is TableLayoutPanelElementPara)
                         {
+                            // Delete parameter
                             Data.DelPara(element.Bswmd.AsrPathShort);
                         }
                         else
                         {
+                            // Delete reference
                             Data.DelRef(element.Bswmd.AsrPathShort);
                         }
+                        // Update ui
                         UpdateUi();
                     }
                 }
             }
         }
 
+        /// <summary>
+        /// EcucTableLayout mouse click event handler.
+        /// </summary>
+        /// <param name="sender">EcucTableLayout.</param>
+        /// <param name="e">Mouse event.</param>
         private void MouseDownEventHandler(object? sender, MouseEventArgs e)
         {
             if (sender is EcucTableLayout)
             {
+                // Get selected control
                 var controlSeleted = GetChildAtPoint(e.Location);
                 if (controlSeleted == null)
                 {
@@ -874,23 +991,27 @@ namespace Ecuc.EcucUi
                 {
                     var bswmd = element.Bswmd;
 
+                    // Prepare meta infomation of bswmd
                     rtDesc.Clear();
                     if (bswmd == null)
                     {
                         return;
                     }
-                    rtDesc.Text += string.Format("Name: {0}\r\n", bswmd.ShortName);
-                    rtDesc.Text += string.Format("Description: {0}\r\n", bswmd.Desc);
-                    rtDesc.Text += string.Format("Lower Multiplicity: {0}\r\n", bswmd.Lower);
+                    rtDesc.Text += $"Name: {bswmd.ShortName}{Environment.NewLine}";
+                    rtDesc.Text += $"Description: {bswmd.Desc}{Environment.NewLine}";
+                    rtDesc.Text += $"Trace: {bswmd.Trace}{Environment.NewLine}";
+                    rtDesc.Text += $"Lower Multiplicity: {bswmd.Lower}{Environment.NewLine}";
                     if (bswmd.Upper == int.MaxValue)
                     {
-                        rtDesc.Text += string.Format("Upper Multiplicity: {0}\r\n", "Inf");
+                        rtDesc.Text += $"Upper Multiplicity: Inf{Environment.NewLine}";
                     }
                     else
                     {
-                        rtDesc.Text += string.Format("Upper Multiplicity: {0}\r\n", bswmd.Upper);
+                        rtDesc.Text += $"Upper Multiplicity: {bswmd.Upper}{Environment.NewLine}";
                     }
+                    rtDesc.Text += $"BSWMD Path: {bswmd.AsrPath}{Environment.NewLine}";
 
+                    // Prapare create, delete and de-reference menu item
                     if (element.Exist == true)
                     {
                         cmCreate.Visible = false;
@@ -914,7 +1035,12 @@ namespace Ecuc.EcucUi
                 }
             }
         }
-
+        
+        /// <summary>
+        /// Popup menu trigger event handler.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void VisibleEventHandler(object? sender, EventArgs e)
         {
             if (sender is Control ctrl)
@@ -926,12 +1052,18 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Filter textbox key down event handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Key event.</param>
         private void FilterKeyDownEventHandler(object? sender, KeyEventArgs e)
         {
             try
             {
                 if (e.KeyCode == Keys.Enter)
                 {
+                    // Enter is pressed, change filter
                     Control ctrlGrid = Controls["DATAGRID"];
                     Control ctrlText = Controls["DATAGRIDFILTER"];
                     if (ctrlGrid == null || ctrlText == null)
@@ -952,29 +1084,77 @@ namespace Ecuc.EcucUi
         }
     }
 
+    /// <summary>
+    /// Paramter value type.
+    /// </summary>
     public enum EcucInstanceParaType
     {
+        /// <summary>
+        /// Text type with string value.
+        /// </summary>
         TEXT = 0,
+        /// <summary>
+        /// Enumeration type with several candidates.
+        /// </summary>
         ENUM,
+        /// <summary>
+        /// Boolean type with true or false.
+        /// </summary>
         BOOL
     }
 
+    /// <summary>
+    /// Interface of ui element on EcucTableLayout
+    /// </summary>
     public interface IEcucTableLayoutPanelElement
     {
+        /// <summary>
+        /// Ecuc datas of element.
+        /// </summary>
         EcucDataList Datas { get; }
+        /// <summary>
+        /// Ecuc bsmwd of Datas.
+        /// </summary>
         IEcucBswmdBase Bswmd { get; }
+        /// <summary>
+        /// Exist status of element.
+        /// </summary>
         bool Exist { get; set; }
+        /// <summary>
+        /// Title of element.
+        /// </summary>
         public string Title { get; }
+        /// <summary>
+        /// Text of element.
+        /// </summary>
         public List<string> Text { get; }
+        /// <summary>
+        /// Short form of Text.
+        /// </summary>
         public List<string> TextShort { get; }
     }
 
+    /// <summary>
+    /// Ui element of parameter.
+    /// </summary>
     public class TableLayoutPanelElementPara : IEcucTableLayoutPanelElement
     {
+        /// <summary>
+        /// Ecuc datas of element.
+        /// </summary>
         public EcucDataList Datas { get; } = new();
+        /// <summary>
+        /// Exist status of element.
+        /// </summary>
         public IEcucBswmdBase Bswmd { get; }
+        /// <summary>
+        /// Exist status of element.
+        /// </summary>
         public bool Exist { get; set; } = false;
 
+        /// <summary>
+        /// Multiplicity of bswmd.
+        /// </summary>
         public bool Multiply
         {
             get
@@ -983,6 +1163,9 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Title of element.
+        /// </summary>
         public string Title
         {
             get
@@ -991,29 +1174,25 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Candidate of element. Only valid for enumeration type.
+        /// </summary>
         public List<string> Candidate
         {
             get
             {
-                var result = new List<string>();
-
-                switch (Bswmd)
+                List<string> result = Bswmd switch
                 {
-                    case EcucBswmdEnumerationPara:
-                        if (Bswmd is EcucBswmdEnumerationPara bswmdPara)
-                        {
-                            result = bswmdPara.Candidate;
-                        }
-                        break;
-
-                    default:
-                        throw new NotImplementedException();
-                }
-
+                    EcucBswmdEnumerationPara bswmdPara => bswmdPara.Candidate,
+                    _ => throw new NotImplementedException(),
+                };
                 return result;
             }
         }
 
+        /// <summary>
+        /// Convert bswmd parameter type to ui type.
+        /// </summary>
         public EcucInstanceParaType Type
         {
             get
@@ -1031,182 +1210,167 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Text of element accoding to bswmd type.
+        /// </summary>
         public List<string> Text
         {
             get
             {
                 switch (Bswmd)
                 {
-                    case EcucBswmdEnumerationPara:
+                    case EcucBswmdEnumerationPara bswmdEnum:
                         {
                             var result = new List<string>();
 
-                            if (Bswmd is EcucBswmdEnumerationPara bswmdEnum)
+                            if (Multiply == false)
                             {
-                                if (Multiply == false)
+                                if (Datas.Count == 0)
                                 {
-                                    if (Datas.Count == 0)
+                                    result.Add(bswmdEnum.Default);
+                                }
+                                else
+                                {
+                                    result.Add(Datas[0].Value);
+                                }
+                            }
+                            return result;
+                        }
+
+                    case EcucBswmdIntegerPara bswmdInt:
+                        {
+                            var result = new List<string>();
+
+                            if (Multiply == false)
+                            {
+                                if (Datas.Count == 0)
+                                {
+                                    if (bswmdInt.Format == "HEX")
                                     {
-                                        result.Add(bswmdEnum.Default);
+                                        result.Add(string.Format("0x{0:X}", bswmdInt.Default));
                                     }
                                     else
                                     {
-                                        result.Add(Datas[0].Value);
+                                        result.Add(string.Format("{0}", bswmdInt.Default));
+                                    }
+                                }
+                                else
+                                {
+                                    result.Add(Datas[0].Value);
+                                }
+                            }
+                            else
+                            {
+                                foreach (var data in Datas)
+                                {
+                                    if (bswmdInt.Format == "HEX")
+                                    {
+                                        result.Add(string.Format("0x{0:X}", Int64.Parse(data.Value)));
+                                    }
+                                    else
+                                    {
+                                        result.Add(string.Format("{0}", Int64.Parse(data.Value)));
                                     }
                                 }
                             }
                             return result;
                         }
 
-                    case EcucBswmdIntegerPara:
+                    case EcucBswmdBooleanPara bswmdBool:
                         {
                             var result = new List<string>();
 
-                            if (Bswmd is EcucBswmdIntegerPara bswmdInt)
+                            if (Multiply == false)
                             {
-                                if (Multiply == false)
+                                if (Datas.Count == 0)
                                 {
-                                    if (Datas.Count == 0)
-                                    {
-                                        if (bswmdInt.Format == "HEX")
-                                        {
-                                            result.Add(string.Format("0x{0:X}", bswmdInt.Default));
-                                        }
-                                        else
-                                        {
-                                            result.Add(string.Format("{0}", bswmdInt.Default));
-                                        }
-                                    }
-                                    else
-                                    {
-                                        result.Add(Datas[0].Value);
-                                    }
+                                    result.Add(bswmdBool.Default.ToString());
                                 }
                                 else
                                 {
-                                    foreach (var data in Datas)
-                                    {
-                                        if (bswmdInt.Format == "HEX")
-                                        {
-                                            result.Add(string.Format("0x{0:X}", Int64.Parse(data.Value)));
-                                        }
-                                        else
-                                        {
-                                            result.Add(string.Format("{0}", Int64.Parse(data.Value)));
-                                        }
-                                    }
+                                    result.Add(Datas[0].Value);
+                                }
+                            }
+                            else
+                            {
+                                foreach (var data in Datas)
+                                {
+                                    result.Add(data.Value);
                                 }
                             }
                             return result;
                         }
 
-                    case EcucBswmdBooleanPara:
+                    case EcucBswmdFloatPara bswmdFloat:
                         {
                             var result = new List<string>();
 
-                            if (Bswmd is EcucBswmdBooleanPara bswmdBool)
+                            if (Multiply == false)
                             {
-                                if (Multiply == false)
+                                if (Datas.Count == 0)
                                 {
-                                    if (Datas.Count == 0)
-                                    {
-                                        result.Add(bswmdBool.Default.ToString());
-                                    }
-                                    else
-                                    {
-                                        result.Add(Datas[0].Value);
-                                    }
+                                    result.Add(string.Format("{0:F}", bswmdFloat.Default));
                                 }
                                 else
                                 {
-                                    foreach (var data in Datas)
-                                    {
-                                        result.Add(data.Value);
-                                    }
+                                    result.Add(Datas[0].Value);
+                                }
+                            }
+                            else
+                            {
+                                foreach (var data in Datas)
+                                {
+                                    result.Add(data.Value);
                                 }
                             }
                             return result;
                         }
 
-                    case EcucBswmdFloatPara:
+                    case EcucBswmdStringPara bswmdString:
                         {
                             var result = new List<string>();
 
-                            if (Bswmd is EcucBswmdFloatPara bswmdFloat)
+                            if (Multiply == false)
                             {
-                                if (Multiply == false)
+                                if (Datas.Count == 0)
                                 {
-                                    if (Datas.Count == 0)
-                                    {
-                                        result.Add(string.Format("{0:F}", bswmdFloat.Default));
-                                    }
-                                    else
-                                    {
-                                        result.Add(Datas[0].Value);
-                                    }
+                                    result = bswmdString.Default;
                                 }
                                 else
                                 {
-                                    foreach (var data in Datas)
-                                    {
-                                        result.Add(data.Value);
-                                    }
+                                    result.Add(Datas[0].Value);
+                                }
+                            }
+                            else
+                            {
+                                foreach (var data in Datas)
+                                {
+                                    result.Add(data.Value);
                                 }
                             }
                             return result;
                         }
 
-                    case EcucBswmdStringPara:
+                    case EcucBswmdFunctionNamePara bswmdFunctionName:
                         {
                             var result = new List<string>();
 
-                            if (Bswmd is EcucBswmdStringPara bswmdString)
+                            if (Multiply == false)
                             {
-                                if (Multiply == false)
+                                if (Datas.Count == 0)
                                 {
-                                    if (Datas.Count == 0)
-                                    {
-                                        result = bswmdString.Default;
-                                    }
-                                    else
-                                    {
-                                        result.Add(Datas[0].Value);
-                                    }
+                                    result = bswmdFunctionName.Default;
                                 }
                                 else
                                 {
-                                    foreach (var data in Datas)
-                                    {
-                                        result.Add(data.Value);
-                                    }
+                                    result.Add(Datas[0].Value);
                                 }
                             }
-                            return result;
-                        }
-
-                    case EcucBswmdFunctionNamePara:
-                        {
-                            var result = new List<string>();
-
-                            if (Bswmd is EcucBswmdFunctionNamePara bswmdFunctionName)
+                            else
                             {
-                                if (Multiply == false)
+                                foreach (var data in Datas)
                                 {
-                                    if (Datas.Count == 0)
-                                    {
-                                        result = bswmdFunctionName.Default;
-                                    }
-                                    else
-                                    {
-                                        result.Add(Datas[0].Value);
-                                    }
-                                }
-                                else
-                                {
-                                    foreach (var data in Datas)
-                                    {
-                                        result.Add(data.Value);
-                                    }
+                                    result.Add(data.Value);
                                 }
                             }
                             return result;
@@ -1218,6 +1382,9 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Short form of Text.
+        /// </summary>
         public List<string> TextShort
         {
             get
@@ -1226,20 +1393,42 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Initialize TableLayoutPanelElementPara.
+        /// </summary>
+        /// <param name="bswmd">Ecuc bswmd of element.</param>
+        /// <param name="datas">Ecuc datas of element.</param>
+        /// <param name="exist">Exist status of element.</param>
         public TableLayoutPanelElementPara(IEcucBswmdBase bswmd, EcucDataList datas, bool exist)
         {
+            // Handle input
             Datas = datas;
             Bswmd = bswmd;
             Exist = exist;
         }
     }
 
+    /// <summary>
+    /// Ui element of reference.
+    /// </summary>
     public class TableLayoutPanelElementRef : IEcucTableLayoutPanelElement
     {
+        /// <summary>
+        /// Ecuc datas of element.
+        /// </summary>
         public EcucDataList Datas { get; } = new();
+        /// <summary>
+        /// Ecuc bswmd of element.
+        /// </summary>
         public IEcucBswmdBase Bswmd { get; }
+        /// <summary>
+        /// Exist status of element.
+        /// </summary>
         public bool Exist { get; set; } = false;
 
+        /// <summary>
+        /// Multiplicity of bswmd.
+        /// </summary>
         public bool Multiply
         {
             get
@@ -1248,6 +1437,9 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Title of element.
+        /// </summary>
         public string Title
         {
             get
@@ -1256,6 +1448,9 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Text of element.
+        /// </summary>
         public List<string> Text
         {
             get
@@ -1281,6 +1476,9 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Short form of Text.
+        /// </summary>
         public List<string> TextShort
         {
             get
@@ -1303,6 +1501,12 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Initialize TableLayoutPanelElementRef.
+        /// </summary>
+        /// <param name="bswmd">Ecuc bswmd of element.</param>
+        /// <param name="datas">Ecuc datas of element.</param>
+        /// <param name="exist">Exist status of element.</param>
         public TableLayoutPanelElementRef(IEcucBswmdReference bswmd, EcucDataList datas, bool exist)
         {
             Datas = datas;

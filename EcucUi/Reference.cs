@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 Dai Jin Shi E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,25 +21,40 @@
 using Ecuc.EcucBase.EBswmd;
 using Ecuc.EcucBase.EData;
 using Ecuc.EcucBase.EInstance;
-using System.Windows.Forms;
-using System;
-using System.Collections.Generic;
 
 namespace AutosarConfigurator
 {
+    /// <summary>
+    /// Reference form
+    /// </summary>
     partial class Reference : Form
     {
+        /// <summary>
+        /// Data souce of instance manager.
+        /// </summary>
         EcucInstanceManager Manager { get; }
 
+        /// <summary>
+        /// Initialize Reference.
+        /// </summary>
+        /// <param name="manager">Data souce of instance manager.</param>
         public Reference(EcucInstanceManager manager)
         {
+            // Handle input
             Manager = manager;
+            // Prepare control
             InitializeComponent();
             tbFilter.TextChanged += FilterTextChanged;
         }
 
+        /// <summary>
+        /// Form visibility changed event handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used.</param>
         private void LvCandidate_VisibleChanged(object sender, EventArgs e)
         {
+            // Clear all existing ui
             tbFilter.Text = "";
             lvCandidate.Items.Clear();
             lvCandidate.Columns.Clear();
@@ -48,16 +63,22 @@ namespace AutosarConfigurator
             {
                 return;
             }
-
+            // Construct new ui when visible is true
             PrepareCandidate();
         }
 
-        private void ListViewCandidateDoubleClickEventHandler(object sender, EventArgs e)
+        /// <summary>
+        /// Double click event handler
+        /// </summary>
+        /// <param name="sender">Listview of candidates.</param>
+        /// <param name="e">Not used.</param>
+        private void ListViewCandidateDoubleClickEventHandler(object? sender, EventArgs e)
         {
             var output = new Dictionary<string, List<string>>();
 
             if (sender is ListView lv)
             {
+                // Record selected items to tag and close form
                 foreach (ListViewItem selectItem in lv.SelectedItems)
                 {
                     if (selectItem.Tag is IEcucInstanceModule instance)
@@ -74,119 +95,137 @@ namespace AutosarConfigurator
             }
         }
 
+        /// <summary>
+        /// Prepare candidate according to filter.
+        /// </summary>
+        /// <param name="filter">Filter expression string.</param>
         private void PrepareCandidate(string filter="")
         {
+            // Clear all existing ui
             lvCandidate.Items.Clear();
             lvCandidate.Columns.Clear();
 
-            if (Tag is KeyValuePair<IEcucBswmdBase, EcucDataList> pair)
+            try
             {
-                List<IEcucInstanceBase> candidates = new();
-
-                switch (pair.Key)
+                // Prepare ui
+                if (Tag is KeyValuePair<IEcucBswmdBase, EcucDataList> pair)
                 {
-                    case EcucBswmdRef:
-                        if (pair.Key is EcucBswmdRef bswmdRef)
-                        {
-                            var result = Manager.GetInstancesByBswmdPath(bswmdRef.DestPath);
-                            if (result.Count > 0)
-                            {
-                                candidates.AddRange(result);
-                            }
-                            else
-                            {
-                                var bswmd = bswmdRef.GetBswmdFromBswmdPath(bswmdRef.DestPath);
-                                candidates.AddRange(Manager.GetInstancesByBswmdPath(bswmd.AsrPath));
-                            }
-                        }
-                        break;
+                    List<IEcucInstanceBase> candidates = new();
 
-                    case EcucBswmdForeignRef:
-                        if (pair.Key is EcucBswmdForeignRef bswmdForeignRef)
-                        {
-                            if (bswmdForeignRef.DestType == "ECUC-MODULE-CONFIGURATION-VALUES")
+                    switch (pair.Key)
+                    {
+                        case EcucBswmdRef:
+                            if (pair.Key is EcucBswmdRef bswmdRef)
                             {
-                                candidates.AddRange(Manager.EcucModules);
-                            }
-                        }
-                        break;
-
-                    case EcucBswmdSymbolicNameRef:
-                        if (pair.Key is EcucBswmdSymbolicNameRef bswmdSymbolicRef)
-                        {
-                            var result = Manager.GetInstancesByBswmdPath(bswmdSymbolicRef.DestPath);
-                            if (result.Count > 0)
-                            {
-                                candidates.AddRange(result);
-                            }
-                            else
-                            {
-                                var bswmd = bswmdSymbolicRef.GetBswmdFromBswmdPath(bswmdSymbolicRef.DestPath);
-                                candidates.AddRange(Manager.GetInstancesByBswmdPath(bswmd.AsrPath));
-                            }
-                        }
-                        break;
-
-                    case EcucBswmdChoiceRef:
-                        if (pair.Key is EcucBswmdChoiceRef bswmdChoiceRef)
-                        {
-                            foreach (var choice in bswmdChoiceRef.Choices)
-                            {
-                                var result = Manager.GetInstancesByBswmdPath(choice.Key);
+                                var result = Manager.GetInstancesByBswmdPath(bswmdRef.DestPath);
                                 if (result.Count > 0)
                                 {
                                     candidates.AddRange(result);
                                 }
                                 else
                                 {
-                                    var bswmd = bswmdChoiceRef.GetBswmdFromBswmdPath(choice.Key);
+                                    var bswmd = bswmdRef.GetBswmdFromBswmdPath(bswmdRef.DestPath);
                                     candidates.AddRange(Manager.GetInstancesByBswmdPath(bswmd.AsrPath));
                                 }
                             }
-                        }
-                        break;
+                            break;
 
-                    default:
-                        break;
-                }
-
-                var c = lvCandidate.Columns.Add(pair.Key.ShortName);
-                foreach (var candidate in candidates)
-                {
-                    if (candidate is IEcucInstanceModule candidateModule)
-                    {
-                        bool findExist = false;
-                        foreach (var pathExist in pair.Value)
-                        {
-                            if (pathExist.Value == candidateModule.AsrPath)
+                        case EcucBswmdForeignRef:
+                            if (pair.Key is EcucBswmdForeignRef bswmdForeignRef)
                             {
-                                findExist = true;
-                                break;
-                            }
-                        }
-
-                        if (findExist == false)
-                        {
-                            if (filter != "")
-                            {
-                                if (candidateModule.AsrPathShort.Contains(filter) == false)
+                                if (bswmdForeignRef.DestType == "ECUC-MODULE-CONFIGURATION-VALUES")
                                 {
-                                    continue;
+                                    candidates.AddRange(Manager.EcucModules);
                                 }
                             }
-                            var item = lvCandidate.Items.Add(candidateModule.AsrPath);
-                            item.Tag = candidate;
-                        }
+                            break;
 
+                        case EcucBswmdSymbolicNameRef:
+                            if (pair.Key is EcucBswmdSymbolicNameRef bswmdSymbolicRef)
+                            {
+                                var result = Manager.GetInstancesByBswmdPath(bswmdSymbolicRef.DestPath);
+                                if (result.Count > 0)
+                                {
+                                    candidates.AddRange(result);
+                                }
+                                else
+                                {
+                                    var bswmd = bswmdSymbolicRef.GetBswmdFromBswmdPath(bswmdSymbolicRef.DestPath);
+                                    candidates.AddRange(Manager.GetInstancesByBswmdPath(bswmd.AsrPath));
+                                }
+                            }
+                            break;
+
+                        case EcucBswmdChoiceRef:
+                            if (pair.Key is EcucBswmdChoiceRef bswmdChoiceRef)
+                            {
+                                foreach (var choice in bswmdChoiceRef.Choices)
+                                {
+                                    var result = Manager.GetInstancesByBswmdPath(choice.Key);
+                                    if (result.Count > 0)
+                                    {
+                                        candidates.AddRange(result);
+                                    }
+                                    else
+                                    {
+                                        var bswmd = bswmdChoiceRef.GetBswmdFromBswmdPath(choice.Key);
+                                        candidates.AddRange(Manager.GetInstancesByBswmdPath(bswmd.AsrPath));
+                                    }
+                                }
+                            }
+                            break;
+
+                        default:
+                            break;
                     }
-                }
 
-                c.Width = Width / 2;
-                lvCandidate.DoubleClick += ListViewCandidateDoubleClickEventHandler;
+                    var c = lvCandidate.Columns.Add(pair.Key.ShortName);
+                    foreach (var candidate in candidates)
+                    {
+                        if (candidate is IEcucInstanceModule candidateModule)
+                        {
+                            bool findExist = false;
+                            foreach (var pathExist in pair.Value)
+                            {
+                                if (pathExist.Value == candidateModule.AsrPath)
+                                {
+                                    findExist = true;
+                                    break;
+                                }
+                            }
+
+                            if (findExist == false)
+                            {
+                                if (filter != "")
+                                {
+                                    if (candidateModule.AsrPathShort.Contains(filter) == false)
+                                    {
+                                        continue;
+                                    }
+                                }
+                                var item = lvCandidate.Items.Add(candidateModule.AsrPath);
+                                item.Tag = candidate;
+                            }
+
+                        }
+                    }
+
+                    c.Width = Width / 2;
+                    lvCandidate.DoubleClick += ListViewCandidateDoubleClickEventHandler;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
             }
         }
 
-        private void FilterTextChanged(object sender, EventArgs e)
+        /// <summary>
+        /// Filter text changed event handler.
+        /// </summary>
+        /// <param name="sender">Not used</param>
+        /// <param name="e">Not used</param>
+        private void FilterTextChanged(object? sender, EventArgs e)
         {
             PrepareCandidate(tbFilter.Text);
         }

@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 Dai Jin Shi E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using Ecuc.EcucBase.EBase;
 using Ecuc.EcucBase.EBswmd;
 using Ecuc.EcucBase.EData;
 using Ecuc.EcucBase.EInstance;
@@ -25,71 +26,112 @@ using System.ComponentModel;
 
 namespace Ecuc.EcucUi
 {
-    public class EcucTreeView : TreeView
+    /// <summary>
+    /// Ecuc TreeView for model.
+    /// </summary>
+    public class EcucModelTreeView : TreeView
     {
+        /// <summary>
+        /// Data source of instance manager.
+        /// </summary>
         public EcucInstanceManager InstanceManager { get; }
+        /// <summary>
+        /// Data source of bswmd manager.
+        /// </summary>
         public EcucBswmdManager BswmdManager { get; }
 
+        /// <summary>
+        /// RichTextBox to display meta information.
+        /// </summary>
         private readonly RichTextBox richBox;
+        /// <summary>
+        /// EcucTableLayout to display parameter information.
+        /// </summary>
         private readonly EcucTableLayout tableLayout;
-        private readonly ContextMenuStrip cmTreeView;
-        private readonly ToolStripMenuItem cmTreeViewAdd;
-        private readonly ToolStripMenuItem cmTreeViewDelete;
-        private readonly ToolStripMenuItem cmTreeViewUsage;
+        /// <summary>
+        /// Popup menu.
+        /// </summary>
+        private readonly ContextMenuStrip cm;
+        /// <summary>
+        /// Add menu item.
+        /// </summary>
+        private readonly ToolStripMenuItem tmAdd;
+        /// <summary>
+        /// Delete menu item.
+        /// </summary>
+        private readonly ToolStripMenuItem tmDelete;
+        /// <summary>
+        /// Usage menu item.
+        /// </summary>
+        private readonly ToolStripMenuItem tmUsage;
 
-        public EcucTreeView(EcucInstanceManager instanceManager, EcucBswmdManager bswmdManager, RichTextBox rb, EcucTableLayout panel)
+        /// <summary>
+        /// Initialize EcucModelTreeView.
+        /// </summary>
+        /// <param name="instanceManager">Data source of instance manager.</param>
+        /// <param name="bswmdManager">Data source of bswmd manager.</param>
+        /// <param name="rb">RichTextBox to display meta information.</param>
+        /// <param name="panel">EcucTableLayout to display parameter information.</param>
+        public EcucModelTreeView(EcucInstanceManager instanceManager, EcucBswmdManager bswmdManager, RichTextBox rb, EcucTableLayout panel)
         {
+            // Handle input
             richBox = rb;
             tableLayout = panel;
             InstanceManager = instanceManager;
             BswmdManager = bswmdManager;
 
+            // Prepare control
             Dock = DockStyle.Fill;
             Location = new Point(0, 0);
             Margin = new Padding(4);
             Name = "tvModel";
             Size = new Size(450, 850);
             TabIndex = 0;
-            AfterSelect += TvModel_AfterSelect;
-            MouseClick += TvModel_MouseClick;
+            AfterSelect += AfterSelectEventHandler;
+            MouseClick += MouseClickEventHandler;
 
-            cmTreeView = new ContextMenuStrip();
-            cmTreeViewAdd = new ToolStripMenuItem();
-            cmTreeViewDelete = new ToolStripMenuItem();
-            cmTreeViewUsage = new ToolStripMenuItem();
+            cm = new ContextMenuStrip();
+            tmAdd = new ToolStripMenuItem();
+            tmDelete = new ToolStripMenuItem();
+            tmUsage = new ToolStripMenuItem();
 
-            cmTreeView.ImageScalingSize = new Size(20, 20);
-            cmTreeView.Items.AddRange(new ToolStripItem[] {
-            cmTreeViewAdd,
-            cmTreeViewDelete,
-            cmTreeViewUsage});
-            cmTreeView.Name = "cmTreeView";
-            cmTreeView.Size = new Size(127, 58);
+            cm.ImageScalingSize = new Size(20, 20);
+            cm.Items.AddRange(new ToolStripItem[] { tmAdd, tmDelete, tmUsage });
+            cm.Name = "cm";
+            cm.Size = new Size(127, 58);
 
-            cmTreeViewAdd.Name = "cmTreeViewAdd";
-            cmTreeViewAdd.Size = new Size(126, 24);
-            cmTreeViewAdd.Text = "Add";
-            cmTreeViewAdd.Visible = false;
+            tmAdd.Name = "tmAdd";
+            tmAdd.Size = new Size(126, 24);
+            tmAdd.Text = "Add";
+            tmAdd.Visible = false;
 
-            cmTreeViewDelete.Name = "cmTreeViewDelete";
-            cmTreeViewDelete.Size = new Size(126, 24);
-            cmTreeViewDelete.Text = "Delete";
+            tmDelete.Name = "tmDelete";
+            tmDelete.Size = new Size(126, 24);
+            tmDelete.Text = "Delete";
 
-            cmTreeViewUsage.Name = "cmTreeViewUsage";
-            cmTreeViewUsage.Size = new Size(126, 24);
-            cmTreeViewUsage.Text = "Usage";
+            tmUsage.Name = "tmUsage";
+            tmUsage.Size = new Size(126, 24);
+            tmUsage.Text = "Usage";
 
-            cmTreeViewDelete.MouseDown += CmTreeViewDeleteHandler;
+            tmDelete.MouseDown += CmTreeViewDeleteHandler;
 
-            ContextMenuStrip = cmTreeView;
+            ContextMenuStrip = cm;
 
+            ShowNodeToolTips = true;
+
+            // Refresh ui
             RefreshUi();
         }
 
+        /// <summary>
+        /// Refresh ui.
+        /// </summary>
         public void RefreshUi()
         {
             BeginUpdate();
+            // Clear existing ui
             Nodes.Clear();
+            // Construct new ui
             var nodeRoot = Nodes.Add("Ecu Configuration");
             foreach (var module in InstanceManager.EcucModules)
             {
@@ -102,7 +144,12 @@ namespace Ecuc.EcucUi
             EndUpdate();
         }
 
-        private void TvModel_AfterSelect(object? sender, TreeViewEventArgs e)
+        /// <summary>
+        /// Node select event handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used.</param>
+        private void AfterSelectEventHandler(object? sender, TreeViewEventArgs e)
         {
             var selectedNode = SelectedNode;
             if (selectedNode == null)
@@ -112,50 +159,44 @@ namespace Ecuc.EcucUi
 
             switch (selectedNode)
             {
-                case EcucContainerTreeNode:
-                    if (selectedNode is EcucContainerTreeNode containerNode)
+                case EcucContainerTreeNode containerNode:
+                    // Update parameter layout with single container
+                    tableLayout.RefreshUi(containerNode.Data);
+                    // Update meta richbox
+                    richBox.Clear();
+                    richBox.Text += $"Name: {containerNode.Data.BswmdPathShort}{Environment.NewLine}";
+                    richBox.Text += $"Description: {containerNode.Data.Desc}{Environment.NewLine}";
+                    richBox.Text += $"Trace: {containerNode.Data.Trace}{Environment.NewLine}";
+                    richBox.Text += $"Lower Multiplicity: {containerNode.Data.Lower}{Environment.NewLine}";
+                    if (containerNode.Data.Upper == uint.MaxValue)
                     {
-                        tableLayout.RefreshUi(containerNode.Data);
-                        richBox.Clear();
-                        richBox.Text += string.Format("Name: {0}\r\n", containerNode.Data.BswmdPathShort);
-                        richBox.Text += string.Format("Description: {0}\r\n", containerNode.Data.Desc);
-                        richBox.Text += string.Format("Lower Multiplicity: {0}\r\n", containerNode.Data.Lower);
-                        if (containerNode.Data.Upper == uint.MaxValue)
-                        {
-                            richBox.Text += $"Upper Multiplicity: n";
-                        }
-                        else
-                        {
-                            richBox.Text += string.Format("Upper Multiplicity: {0}\r\n", containerNode.Data.Upper);
-                        }
+                        richBox.Text += $"Upper Multiplicity: n{Environment.NewLine}";
                     }
                     else
                     {
-                        throw new Exception("Unexpected ui container type");
+                        richBox.Text += $"Upper Multiplicity: {containerNode.Data.Upper}{Environment.NewLine}";
                     }
+                    richBox.Text += $"BSWMD Path: {containerNode.Data.BswmdPath}{Environment.NewLine}";
                     break;
 
-                case EcucContainersTreeNode:
-                    if (selectedNode is EcucContainersTreeNode containersNode)
+                case EcucContainersTreeNode containersNode:
+                    // Update parameter layout with multiply containers
+                    tableLayout.RefreshUi(containersNode.Bswmd, containersNode.Datas);
+                    richBox.Clear();
+                    // Update meta richbox
+                    richBox.Text += $"Name: {containersNode.Bswmd.ShortName}{Environment.NewLine}";
+                    richBox.Text += $"Description: {containersNode.Bswmd.Desc}{Environment.NewLine}";
+                    richBox.Text += $"Trace: {containersNode.Bswmd.Trace}{Environment.NewLine}";
+                    richBox.Text += $"Lower Multiplicity: {containersNode.Bswmd.Lower}{Environment.NewLine}";
+                    if (containersNode.Bswmd.Upper == uint.MaxValue)
                     {
-                        tableLayout.RefreshUi(containersNode.Bswmd, containersNode.Datas);
-                        richBox.Clear();
-                        richBox.Text += string.Format("Name: {0}\r\n", containersNode.Bswmd.ShortName);
-                        richBox.Text += string.Format("Description: {0}\r\n", containersNode.Bswmd.Desc);
-                        richBox.Text += string.Format("Lower Multiplicity: {0}\r\n", containersNode.Bswmd.Lower);
-                        if (containersNode.Bswmd.Upper == uint.MaxValue)
-                        {
-                            richBox.Text += $"Upper Multiplicity: n";
-                        }
-                        else
-                        {
-                            richBox.Text += string.Format("Upper Multiplicity: {0}\r\n", containersNode.Bswmd.Upper);
-                        }
+                        richBox.Text += $"Upper Multiplicity: n{Environment.NewLine}";
                     }
                     else
                     {
-                        throw new Exception("Unexpected ui container type");
+                        richBox.Text += $"Upper Multiplicity: {containersNode.Bswmd.Upper}{Environment.NewLine}";
                     }
+                    richBox.Text += $"BSWMD Path: {containersNode.Bswmd.AsrPath}{Environment.NewLine}";
                     break;
 
                 default:
@@ -163,55 +204,57 @@ namespace Ecuc.EcucUi
             }
         }
 
-        private void TvModel_MouseClick(object? sender, MouseEventArgs e)
+        /// <summary>
+        /// Mouse click event handler.
+        /// </summary>
+        /// <param name="sender">EcucModelTreeView</param>
+        /// <param name="e">Mouse event.</param>
+        private void MouseClickEventHandler(object? sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right)
             {
                 if (sender is TreeView tv)
                 {
+                    // Right clich shall popup menu
                     var node = tv.GetNodeAt(e.Location);
                     if (node != null)
                     {
                         tv.SelectedNode = node;
                     }
 
-                    cmTreeViewAdd.DropDownItems.Clear();
-                    cmTreeViewUsage.DropDownItems.Clear();
+                    // Prepare menu item.
+                    tmDelete.Visible = false;
+                    tmAdd.DropDownItems.Clear();
+                    tmUsage.DropDownItems.Clear();
                     switch (tv.SelectedNode)
                     {
-                        case EcucContainerTreeNode:
-                            if (tv.SelectedNode is EcucContainerTreeNode containerNode)
+                        case EcucContainerTreeNode containerNode:
+                            if (containerNode.Data.BswmdType == typeof(EcucBswmdChoiceContainer))
                             {
-                                if (containerNode.Data.BswmdType == typeof(EcucBswmdChoiceContainer))
+                                if (containerNode.Data.GetMultiplyStatus("").CanAdd == false)
                                 {
-                                    if (containerNode.Data.GetMultiplyStatus("").CanAdd == false)
-                                    {
-                                        return;
-                                    }
-                                }
-
-                                foreach (var bswmdContainer in containerNode.Data.BswmdContainers)
-                                {
-                                    if (containerNode.Data.GetMultiplyStatus(bswmdContainer.AsrPath).CanAdd == true)
-                                    {
-                                        var addedItem = cmTreeViewAdd.DropDownItems.Add(bswmdContainer.AsrPathShort);
-                                        addedItem.Tag = containerNode;
-                                        addedItem.Name = bswmdContainer.AsrPathShort;
-                                        addedItem.MouseDown += CmTreeViewAddHandler;
-                                    }
-                                }
-                                cmTreeViewDelete.Tag = containerNode;
-
-                                foreach (var u in containerNode.Data.Usage)
-                                {
-                                    var item = cmTreeViewUsage.DropDownItems.Add(u.Parent.ShortName);
-                                    item.Tag = u.Parent;
-                                    item.MouseDown += CmTreeViewUsageHandler;
+                                    return;
                                 }
                             }
-                            else
+
+                            foreach (var bswmdContainer in containerNode.Data.BswmdContainers)
                             {
-                                throw new Exception("Unexpected tag type");
+                                if (containerNode.Data.GetMultiplyStatus(bswmdContainer.AsrPath).CanAdd == true)
+                                {
+                                    var addedItem = tmAdd.DropDownItems.Add(bswmdContainer.AsrPathShort);
+                                    addedItem.Tag = containerNode;
+                                    addedItem.Name = bswmdContainer.AsrPathShort;
+                                    addedItem.MouseDown += CmTreeViewAddHandler;
+                                }
+                            }
+                            tmDelete.Visible = true;
+                            tmDelete.Tag = containerNode;
+
+                            foreach (var u in containerNode.Data.Usage)
+                            {
+                                var item = tmUsage.DropDownItems.Add(u.Parent.ShortName);
+                                item.Tag = u.Parent;
+                                item.MouseDown += CmTreeViewUsageHandler;
                             }
                             break;
 
@@ -219,32 +262,38 @@ namespace Ecuc.EcucUi
                             break;
 
                         default:
-                            throw new Exception("Unexpected tag type");
+                            break;
                     }
 
-                    if (cmTreeViewAdd.DropDownItems.Count > 0)
+                    if (tmAdd.DropDownItems.Count > 0)
                     {
-                        cmTreeViewAdd.Visible = true;
+                        tmAdd.Visible = true;
                     }
                     else
                     {
-                        cmTreeViewAdd.Visible = false;
+                        tmAdd.Visible = false;
                     }
 
-                    if (cmTreeViewUsage.DropDownItems.Count > 0)
+                    if (tmUsage.DropDownItems.Count > 0)
                     {
-                        cmTreeViewUsage.Visible = true;
+                        tmUsage.Visible = true;
                     }
                     else
                     {
-                        cmTreeViewUsage.Visible = false;
+                        tmUsage.Visible = false;
                     }
 
-                    cmTreeView.Visible = true;
+                    // Display popup
+                    cm.Visible = true;
                 }
             }
         }
 
+        /// <summary>
+        /// Add menu item click event handler.
+        /// </summary>
+        /// <param name="sender">Add menu item.</param>
+        /// <param name="e">Mouse event.</param>
         private void CmTreeViewAddHandler(object? sender, MouseEventArgs e)
         {
             if (sender is ToolStripMenuItem item)
@@ -256,22 +305,26 @@ namespace Ecuc.EcucUi
 
                 switch (item.Tag)
                 {
-                    case EcucContainerTreeNode:
-                        if (item.Tag is EcucContainerTreeNode containerNode)
-                        {
-                            BeginUpdate();
-                            containerNode.AddContainer(item.Text);
-                            EndUpdate();
-                        }
+                    case EcucContainerTreeNode containerNode:
+                        // Add container
+                        BeginUpdate();
+                        containerNode.AddContainer(item.Text);
+                        EndUpdate();
                         break;
 
                     default:
                         break;
                 }
+                // Expand select node to display added container
                 SelectedNode.Expand();
             }
         }
 
+        /// <summary>
+        /// Delete menu item click event handler.
+        /// </summary>
+        /// <param name="sender">Delete menu item.</param>
+        /// <param name="e">Mouse event.</param>
         private void CmTreeViewDeleteHandler(object? sender, MouseEventArgs e)
         {
             if (sender is ToolStripMenuItem item)
@@ -283,22 +336,20 @@ namespace Ecuc.EcucUi
 
                 switch (item.Tag)
                 {
-                    case EcucContainerTreeNode:
-                        if (item.Tag is EcucContainerTreeNode container)
+                    case EcucContainerTreeNode container:
+                        if (container.Parent is EcucContainersTreeNode)
                         {
-                            if (container.Parent is EcucContainersTreeNode)
+                            if (container.Parent.Parent is EcucContainerTreeNode parentParentContainer)
                             {
-                                if (container.Parent.Parent is EcucContainerTreeNode parentParentContainer)
-                                {
-                                    BeginUpdate();
-                                    parentParentContainer.DelContainer(container.Data.BswmdPathShort, container.Data.Value);
-                                    EndUpdate();
-                                }
+                                // Delete container
+                                BeginUpdate();
+                                parentParentContainer.DelContainer(container.Data.BswmdPathShort, container.Data.Value);
+                                EndUpdate();
                             }
-                            else if (container.Parent is EcucContainerTreeNode parentContainer)
-                            {
-                                parentContainer.DelContainer(container.Data.BswmdPathShort, container.Title);
-                            }
+                        }
+                        else if (container.Parent is EcucContainerTreeNode parentContainer)
+                        {
+                            parentContainer.DelContainer(container.Data.BswmdPathShort, container.Title);
                         }
                         break;
 
@@ -308,6 +359,11 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Usage menu item click event handler.
+        /// </summary>
+        /// <param name="sender">Usage menu item.</param>
+        /// <param name="e">Mouse event.</param>
         private void CmTreeViewUsageHandler(object? sender, MouseEventArgs e)
         {
             if (sender is ToolStripItem toolStripItem)
@@ -316,7 +372,8 @@ namespace Ecuc.EcucUi
                 {
                     try
                     {
-                        ExpandAllNodes(Nodes[0].Nodes, container.AsrPath);
+                        // Find usage
+                        ExpandAllNodes(container.AsrPath);
                     }
                     catch (Exception ex)
                     {
@@ -326,6 +383,24 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Expand all parent of node with name "name" from top.
+        /// </summary>
+        /// <param name="name">Name of node expanded.</param>
+        public void ExpandAllNodes(string name)
+        {
+            ExpandAllNodes(Nodes[0].Nodes, name);
+        }
+
+        /// <summary>
+        /// Internal Expand all parent of node with name "name".
+        /// </summary>
+        /// <param name="nodes">Start nodes.</param>
+        /// <param name="name">Name of node expanded.</param>
+        /// <returns>
+        ///     true: Expaned node is child of this node.
+        ///     false: Expaned node is not child of this node.
+        /// </returns>
         private bool ExpandAllNodes(TreeNodeCollection nodes, string name)
         {
             foreach (TreeNode node in nodes)
@@ -357,81 +432,83 @@ namespace Ecuc.EcucUi
         }
     }
 
+    /// <summary>
+    /// TreeNode with multiple containers.
+    /// </summary>
     public class EcucContainersTreeNode : TreeNode
     {
+        /// <summary>
+        /// Ecuc bswmd of containers.
+        /// </summary>
         public IEcucBswmdModule Bswmd;
+        /// <summary>
+        /// Ecuc datas of containers.
+        /// </summary>
         public EcucDataList Datas { get; private set; }
-        private bool valid = false;
 
-        public bool Valid
-        {
-            get
-            {
-                return valid;
-            }
-            set
-            {
-                if (valid == value)
-                {
-                    return;
-                }
-
-                valid = value;
-                if (Parent != null)
-                {
-                    if (Parent is EcucContainersTreeNode containers)
-                    {
-                        containers.Valid = value;
-                    }
-                    else if(Parent is EcucContainerTreeNode container)
-                    {
-                        container.Valid = value;
-                    }
-                }
-                if (valid == false)
-                {
-                    ForeColor = Color.Red;
-                }
-                else
-                {
-                    ForeColor = Color.Black;
-                }
-            }
-        }
-
+        /// <summary>
+        /// Initialize EcucContainersTreeNode.
+        /// </summary>
+        /// <param name="bswmd">Ecuc bswmd of containers.</param>
+        /// <param name="datas">Ecuc datas of containers.</param>
         public EcucContainersTreeNode(IEcucBswmdModule bswmd, EcucDataList datas)
         {
+            // Handle input
             Bswmd = bswmd;
             Datas = datas;
-            Valid = datas.Valid;
 
+            // Updateui
             UpdateUi(datas);
         }
 
+        /// <summary>
+        /// Update ui.
+        /// </summary>
         public void UpdateUi()
         {
             UpdateUi(Datas);
         }
 
+        /// <summary>
+        /// Change datas and update ui.
+        /// </summary>
+        /// <param name="datas"></param>
+        /// <exception cref="Exception"></exception>
         public void UpdateUi(EcucDataList datas)
         {
+            // Handle input
             if (Datas != datas)
             {
                 Datas = datas;
             }
 
+            // Handle text and name
             if (Text != Bswmd.AsrPathShort)
             {
                 Text = Bswmd.AsrPathShort;
                 Name = Bswmd.AsrPathShort;
             }
 
+            // Remove parent if no data exist
             if (datas.Count == 0)
             {
                 Parent.Nodes.Remove(this);
                 return;
             }
 
+            // Update tooltip if needed
+            if (Datas.ValidStatus == false)
+            {
+                ToolTipText = Datas.ValidInfo;
+                ForeColor = Color.Red;
+            }
+            else
+            {
+                ToolTipText = "";
+                ForeColor = Color.Black;
+            }
+
+            // Check exist ui with new to decrease time
             int i;
             if (Nodes.Count <= datas.Count)
             {
@@ -472,10 +549,19 @@ namespace Ecuc.EcucUi
         }
     }
 
+    /// <summary>
+    /// TreeNode with single container.
+    /// </summary>
     public class EcucContainerTreeNode : TreeNode
     {
+        /// <summary>
+        /// Ecuc data of container.
+        /// </summary>
         public EcucData Data { get; private set; }
 
+        /// <summary>
+        /// Title of node.
+        /// </summary>
         public string Title
         {
             get
@@ -484,72 +570,62 @@ namespace Ecuc.EcucUi
             }
         }
 
-        private bool valid = false;
-
-        public bool Valid
-        {
-            get
-            {
-                return valid;
-            }
-            set
-            {
-                if (valid == value)
-                {
-                    return;
-                }
-
-                valid = value;
-                if (Parent != null)
-                {
-                    if (Parent is EcucContainersTreeNode containers)
-                    {
-                        containers.Valid = value;
-                    }
-                    else if (Parent is EcucContainerTreeNode container)
-                    {
-                        container.Valid = value;
-                    }
-                }
-                if (valid == false)
-                {
-                    ForeColor = Color.Red;
-                }
-                else
-                {
-                    ForeColor = Color.Black;
-                }
-            }
-        }
-
+        /// <summary>
+        /// Initialize EcucContainerTreeNode.
+        /// </summary>
+        /// <param name="data">Ecuc data of container.</param>
         public EcucContainerTreeNode(EcucData data)
         {
+            // Handle input
             Data = data;
+
+            // Handle control
             Data.PropertyChanged += PropertyChangedEventHandler;
             Name = Data.AsrPath;
-            Valid = data.Valid;
 
+            // Update ui
             UpdateUi();
         }
 
+        /// <summary>
+        /// Update ui.
+        /// </summary>
         public void UpdateUi()
         {
             UpdateUi(Data);
         }
 
+        /// <summary>
+        /// Change data and update ui.
+        /// </summary>
+        /// <param name="data"></param>
         public void UpdateUi(EcucData data)
         {
+            // Handle input
             if (data != Data)
             {
                 Data = data;
             }
 
+            // Handle text and name
             if (Text != Data.Value)
             {
                 Text = Data.Value;
                 Name = Data.AsrPath;
             }
 
+            if (Data.ValidStatus == false)
+            {
+                ToolTipText = Data.ValidInfo;
+                ForeColor = Color.Red;
+            }
+            else
+            {
+                ToolTipText = "";
+                ForeColor = Color.Black;
+            }
+
+            // Check existing ui with new to decease operation
             foreach (var subContainer in Data.SortedContainers)
             {
                 if (subContainer.Value.Count == 0)
@@ -618,19 +694,47 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Add sub-container with short form of bswmd path.
+        /// </summary>
+        /// <param name="bswmdPathShort">Short form of bswmd path of container to add.</param>
         public void AddContainer(string bswmdPathShort)
         {
+            // Add all neccessary sub-elment of container
             Data.AddContainerWithRequiredField(bswmdPathShort);
+            // Update ui
             UpdateUi();
         }
 
+        /// <summary>
+        /// Delete sub-container with short form of bswmd path and short name.
+        /// </summary>
+        /// <param name="bswmdPathShort">Short form of bswmd path of container to delete.</param>
+        /// <param name="shortName">Short name of of container to delete.</param>
+        /// <returns>Count of container with same bswmdPathShort left in container.</returns>
         public int DelContainer(string bswmdPathShort, string shortName)
         {
-            var count = Data.DelContainer(bswmdPathShort, shortName);
-            UpdateUi();
-            return count;
+            try
+            {
+                // Delete container
+                var count = Data.DelContainer(bswmdPathShort, shortName);
+                // Update ui
+                UpdateUi();
+                return count;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return Data.Containers.FindAll(x => x.BswmdPathShort == bswmdPathShort).Count;
+            }
+            
         }
 
+        /// <summary>
+        /// Data Propert changed event handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Changed event.</param>
         void PropertyChangedEventHandler(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == "Value")
@@ -639,9 +743,224 @@ namespace Ecuc.EcucUi
                 Name = Data.AsrPath;
             }
 
-            if (e.PropertyName == "Valid" || e.PropertyName == "PropertyChangedEventHandler")
+            if (e.PropertyName == "ValidStatus")
             {
-                Valid = Data.Valid;
+                UpdateUi();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ecuc validation treeview.
+    /// </summary>
+    public class EcucValidationTreeView : TreeView
+    {
+        /// <summary>
+        /// Data source of instance manager.
+        /// </summary>
+        public EcucInstanceManager InstanceManager { get; }
+        /// <summary>
+        /// Data source of bswmd manager.
+        /// </summary>
+        public EcucBswmdManager BswmdManager { get; }
+
+        /// <summary>
+        /// Model treeview to navigate.
+        /// </summary>
+        private readonly EcucModelTreeView modelTreeView;
+        /// <summary>
+        /// Popup menu.
+        /// </summary>
+        private readonly ContextMenuStrip cm;
+        /// <summary>
+        /// Navigate menu item.
+        /// </summary>
+        private readonly ToolStripMenuItem tmNavigate;
+        /// <summary>
+        /// Solve menu item.
+        /// </summary>
+        private readonly ToolStripMenuItem tmSolve;
+
+        /// <summary>
+        /// Initiailize EcucValidationTreeView.
+        /// </summary>
+        /// <param name="instanceManager">Data source of instance manager.</param>
+        /// <param name="bswmdManager">Data source of bswmd manager.</param>
+        /// <param name="treeViewModel">Model treeview to navigate.</param>
+        public EcucValidationTreeView(EcucInstanceManager instanceManager, EcucBswmdManager bswmdManager, EcucModelTreeView treeViewModel)
+        {
+            // Handle input
+            InstanceManager = instanceManager;
+            BswmdManager = bswmdManager;
+            modelTreeView = treeViewModel;
+
+            // Prepare control
+            Dock = DockStyle.Fill;
+            Location = new Point(0, 0);
+            Margin = new Padding(4);
+            Name = "tvValidation";
+            Size = new Size(450, 850);
+            TabIndex = 0;
+            MouseClick += TreeViewMouseClickEventHandler;
+
+            cm = new ContextMenuStrip();
+            tmNavigate = new ToolStripMenuItem();
+            tmSolve = new ToolStripMenuItem();
+
+            cm.ImageScalingSize = new Size(20, 20);
+            cm.Items.AddRange(new ToolStripItem[] { tmNavigate, tmSolve });
+            cm.Name = "cm";
+            cm.Size = new Size(127, 58);
+
+            tmNavigate.Name = "tmNavigate";
+            tmNavigate.Size = new Size(126, 24);
+            tmNavigate.Text = "Navigate";
+            tmNavigate.Visible = true;
+            tmNavigate.MouseDown += TmNavigateMouseDownEventHandler;
+
+            tmSolve.Name = "tmSolve";
+            tmSolve.Size = new Size(126, 24);
+            tmSolve.Text = "Solve";
+
+            ContextMenuStrip = cm;
+
+            // Refresh ui
+            RefreshUi();
+        }
+
+        /// <summary>
+        /// Refresh ui.
+        /// </summary>
+        public void RefreshUi()
+        {
+            // Iterate all module adding node
+            foreach (var module in InstanceManager.EcucModules)
+            {
+                var node = Nodes.Add($"{module.AsrPathShort} (0)");
+                node.Name = module.AsrPathShort;
+                node.Tag = new EcucData(module, BswmdManager.GetBswmdFromBswmdPath(module.BswmdPath));
+                module.PropertyChanged += ModuleChangedEventHandler;
+            }
+        }
+
+        /// <summary>
+        /// Module data changed event handler.
+        /// </summary>
+        /// <param name="sender">Module which data changed.</param>
+        /// <param name="e">Propery event.</param>
+        private void ModuleChangedEventHandler(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is EcucInstanceModule module)
+            {
+                if (Nodes[module.AsrPathShort] != null)
+                {
+                    if (Nodes[module.AsrPathShort].Tag is EcucData data)
+                    {
+                        // Find node and change its text
+                        var valids = data.ValidRecursive;
+                        var root = Nodes[module.AsrPathShort];
+                        root.Text = $"{root.Name} ({valids.Count})";
+
+                        // Clear invalid information
+                        root.Nodes.Clear();
+                        // Add invalid information
+                        foreach (var valid in valids)
+                        {
+                            var node = root.Nodes.Add(valid.Info);
+                            node.Tag = valid;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Mouse click event handler.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Mouse event.</param>
+        private void TreeViewMouseClickEventHandler(object? sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                // Right click and find selected node
+                var node = GetNodeAt(e.Location);
+                if (node != null)
+                {
+                    SelectedNode = node;
+                    if (node.Tag is EcucValid valid)
+                    {
+                        if (valid.Solves.Count == 0)
+                        {
+                            tmSolve.Visible = false;
+                        }
+                        else
+                        {
+                            // Prepare solve candidates
+                            tmSolve.DropDownItems.Clear();
+                            foreach (var solve in valid.Solves)
+                            {
+                                var item = tmSolve.DropDownItems.Add(solve.Description);
+                                item.MouseDown += TmSolveMouseDownEventHandler;
+                                item.Tag = solve;
+                            }
+                            tmSolve.Visible = true;
+                        }
+                    }
+                    // Display popup
+                    ContextMenuStrip.Show();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Navigate menu item mouse click handler.
+        /// </summary>
+        /// <param name="sender">Navigate menu item.</param>
+        /// <param name="e">Mouse event.</param>
+        private void TmNavigateMouseDownEventHandler(object? sender, MouseEventArgs e)
+        {
+            if (SelectedNode != null)
+            {
+                // Parse node text and find position to navigate in mode treeview
+                var parts = SelectedNode.Text.Split("@");
+                if (parts.Length > 1)
+                {
+                    var part = parts[1];
+                    parts = part.Split(":");
+                    if (parts.Length > 0)
+                    {
+                        modelTreeView.ExpandAllNodes(parts[0]);
+                        modelTreeView.Focus();
+                    }
+                }
+                else if (parts.Length == 1)
+                {
+                    var part = parts[0];
+                    parts = part.Split(":");
+                    if (parts.Length > 0)
+                    {
+                        modelTreeView.ExpandAllNodes(parts[0]);
+                        modelTreeView.Focus();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Solve menu item mouse click handler.
+        /// </summary>
+        /// <param name="sender">Solve menu item.</param>
+        /// <param name="e">Mouse event.</param>
+        private void TmSolveMouseDownEventHandler(object? sender, MouseEventArgs e)
+        {
+            if (sender is ToolStripItem item)
+            {
+                if (item.Tag is EcucSolve solve)
+                {
+                    // Run solver
+                    solve.Solve();
+                }
             }
         }
     }

@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 Dai Jin Shi E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,21 +23,50 @@ using Ecuc.EcucBase.EData;
 
 namespace Ecuc.EcucUi
 {
+    /// <summary>
+    /// Listview to contain single column data.
+    /// </summary>
     public class EcucSingleListView : ListView
     {
+        /// <summary>
+        /// UiData to display EcucData.
+        /// </summary>
         private IEcucTableLayoutPanelElement UiData { get; set; }
+        /// <summary>
+        /// Window of refernece.
+        /// </summary>
         private readonly Form wdReference;
+        /// <summary>
+        /// EcucTableLayout control to display parameters.
+        /// </summary>
         private readonly EcucTableLayout tableLayout;
+        /// <summary>
+        /// Popup menu in ListView.
+        /// </summary>
         private readonly ContextMenuStrip cm;
+        /// <summary>
+        /// Create menu item.
+        /// </summary>
         private readonly ToolStripMenuItem cmCreate;
+        /// <summary>
+        /// Detele menu item.
+        /// </summary>
         private readonly ToolStripMenuItem cmDelete;
 
+        /// <summary>
+        /// Initialize EcucSingleListView.
+        /// </summary>
+        /// <param name="uiData">uiData to display.</param>
+        /// <param name="wd">Form for reference choose.</param>
+        /// <param name="table">EcucTableLayout to display parameter.</param>
         public EcucSingleListView(IEcucTableLayoutPanelElement uiData, Form wd, EcucTableLayout table)
         {
+            // Handle input
             UiData = uiData;
             wdReference = wd;
             tableLayout = table;
 
+            // Prepare controls.
             cm = new ContextMenuStrip();
             cmCreate = new ToolStripMenuItem();
             cmDelete = new ToolStripMenuItem();
@@ -62,40 +91,57 @@ namespace Ecuc.EcucUi
             cmDelete.MouseDown += CmDeleteHandler;
 
             ContextMenuStrip = cm;
-
+            
+            // Refresh ui.
             RefreshUi();
         }
 
+        /// <summary>
+        /// Refresh listview.
+        /// </summary>
         public void RefreshUi()
         {
             RefreshUi(UiData);
         }
 
+        /// <summary>
+        /// Change ui data and refresh listview.
+        /// </summary>
+        /// <param name="uiData"></param>
         public void RefreshUi(IEcucTableLayoutPanelElement uiData)
         {
+            // Handle input
             UiData = uiData;
+
+            // Clear existing ui
             Columns.Clear();
             Items.Clear();
 
+            // Start to construct ui
             BeginUpdate();
+            // Add column
             var c = Columns.Add(UiData.Bswmd.AsrPathShort);
             var maxWords = 0;
             if (UiData.Text.Count == 0)
             {
-                Width = tableLayout.Height / 2;
+                // No data, use default width
+                Width = tableLayout.Width / 2;
                 Height = 100;
             }
             else
             {
                 foreach (var text in UiData.Text)
                 {
+                    // Add text and calculate max words
                     var item = Items.Add(text);
                     if (text.Length > maxWords)
                     {
                         maxWords = text.Length;
                     }
                 }
+                // Calculate width
                 Width = maxWords * 8 + 20 > tableLayout.Width / 2 ? maxWords * 8 + 20 : tableLayout.Width / 2;
+                // Calculate height
                 if (UiData.Text.Count * 20 + 60 < 100)
                 {
                     Height = 100;
@@ -115,43 +161,47 @@ namespace Ecuc.EcucUi
             EndUpdate();
         }
 
+        /// <summary>
+        /// Add menu item handler.
+        /// </summary>
+        /// <param name="sender">Menu item trigger this handler.</param>
+        /// <param name="e">Mouse event trigger this handler.</param>
         private void CmAddHandler(object? sender, MouseEventArgs e)
         {
             if (sender is ToolStripMenuItem)
             {
                 switch (UiData)
                 {
-                    case TableLayoutPanelElementPara:
-                        if (UiData is TableLayoutPanelElementPara elementPara)
+                    case TableLayoutPanelElementPara elementPara:
+                        // Add paramter
+                        if (tableLayout.Data != null)
                         {
-                            if (tableLayout.Data != null)
-                            {
-                                tableLayout.Data.AddPara(elementPara.Bswmd.AsrPathShort);
-                                tableLayout.UpdateUi();
-                            }
+                            tableLayout.Data.AddPara(elementPara.Bswmd.AsrPathShort);
+                            tableLayout.UpdateUi();
                         }
                         break;
 
-                    case TableLayoutPanelElementRef:
-                        if (UiData is TableLayoutPanelElementRef elementRef)
+                    case TableLayoutPanelElementRef elementRef:
+                        // Prepare candidate reference information and call reference form
+                        wdReference.Tag = new KeyValuePair<IEcucBswmdBase, EcucDataList>(UiData.Bswmd, UiData.Datas);
+                        wdReference.ShowDialog();
+                        // Get data from reference form
+                        if (tableLayout.Data != null)
                         {
-                            wdReference.Tag = new KeyValuePair<IEcucBswmdBase, EcucDataList>(UiData.Bswmd, UiData.Datas);
-                            wdReference.ShowDialog();
-                            if (tableLayout.Data != null)
+                            if (wdReference.Tag is Dictionary<string, List<string>> referenceDict)
                             {
-                                if (wdReference.Tag is Dictionary<string, List<string>> referenceDict)
+                                // Iterate all references in tag and add reference
+                                foreach (var references in referenceDict)
                                 {
-                                    foreach (var references in referenceDict)
+                                    foreach (var reference in references.Value)
                                     {
-                                        foreach (var reference in references.Value)
-                                        {
-                                            tableLayout.Data.AddRef(elementRef.Bswmd.AsrPathShort, reference);
-                                        }
-
+                                        tableLayout.Data.AddRef(elementRef.Bswmd.AsrPathShort, reference);
                                     }
+
                                 }
-                                tableLayout.UpdateUi();
                             }
+                            // Update EcucTableLayout ui
+                            tableLayout.UpdateUi();
                         }
                         break;
 
@@ -161,38 +211,40 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Delete menu item handler.
+        /// </summary>
+        /// <param name="sender">Menu item trigger this handler.</param>
+        /// <param name="e">Mouse event trigger this handler.</param>
         private void CmDeleteHandler(object? sender, MouseEventArgs e)
         {
             if (sender is ToolStripMenuItem)
             {
                 switch (UiData)
                 {
-                    case TableLayoutPanelElementPara:
-                        if (UiData is TableLayoutPanelElementPara elementPara)
+                    case TableLayoutPanelElementPara elementPara:
+                        // Delete paramter
+                        if (tableLayout.Data != null)
                         {
-                            if (tableLayout.Data != null)
-                            {
-                                tableLayout.Data.DelPara(elementPara.Bswmd.AsrPath);
-                                tableLayout.UpdateUi();
-                            }
+                            tableLayout.Data.DelPara(elementPara.Bswmd.AsrPath);
+                            tableLayout.UpdateUi();
                         }
                         break;
 
-                    case TableLayoutPanelElementRef:
-                        if (UiData is TableLayoutPanelElementRef elementRef)
+                    case TableLayoutPanelElementRef elementRef:
+                        if (tableLayout.Data != null)
                         {
-                            if (tableLayout.Data != null)
+                            // Delete all reference in selected item
+                            foreach (ListViewItem selectedItem in SelectedItems)
                             {
-                                foreach (ListViewItem selectedItem in SelectedItems)
+                                var str = selectedItem.Text;
+                                if (str != null)
                                 {
-                                    var str = selectedItem.Text;
-                                    if (str != null)
-                                    {
-                                        tableLayout.Data.DelRef(elementRef.Bswmd.AsrPathShort, str);
-                                    }
+                                    tableLayout.Data.DelRef(elementRef.Bswmd.AsrPathShort, str);
                                 }
-                                tableLayout.UpdateUi();
                             }
+                            // Update EcucTableLayout ui
+                            tableLayout.UpdateUi();
                         }
                         break;
 
@@ -203,43 +255,78 @@ namespace Ecuc.EcucUi
         }
     }
 
+    /// <summary>
+    /// DataGrid for display multiply container paramters.
+    /// </summary>
     public class EcucMultiplyDataGrid : DataGridView
     {
+        /// <summary>
+        /// Ecuc bsmwd of containers.
+        /// </summary>
         private IEcucBswmdBase Bswmd { get; set; }
+        /// <summary>
+        /// Ecuc data of containers.
+        /// </summary>
         private EcucDataList Datas { get; set; }
+        /// <summary>
+        /// Ecuc data after filter.
+        /// </summary>
         private EcucDataList FilteredDatas { get; set; } = new EcucDataList();
 
+        /// <summary>
+        /// Intialize EcucMultiplyDataGrid.
+        /// </summary>
+        /// <param name="bswmd">Ecuc bswmd of containers.</param>
+        /// <param name="datas">Ecuc data of containers.</param>
         public EcucMultiplyDataGrid(IEcucBswmdBase bswmd, EcucDataList datas)
         {
+            // Handle input
             Bswmd = bswmd;
             Datas = datas;
             FilteredDatas = datas;
 
+            // Prepare controls
             VirtualMode = true;
             ReadOnly = true;
             AllowUserToAddRows = false;
             AllowUserToDeleteRows = false;
             CellValueNeeded += CellValueNeededEventHandler;
 
+            // Refresh ui
             RefreshUi();
         }
 
+        /// <summary>
+        /// Refresh ui.
+        /// </summary>
+        /// <param name="filter">Filter of Ecuc data, empty as default.</param>
         public void RefreshUi(string filter = "")
         {
             RefreshUi(Bswmd, Datas, filter);
         }
 
+        /// <summary>
+        /// Change data and update ui.
+        /// </summary>
+        /// <param name="bswmd">Ecuc bswmd to change.</param>
+        /// <param name="datas">Ecuc datas to change.</param>
+        /// <param name="filter">Filter to change.</param>
         public void RefreshUi(IEcucBswmdBase bswmd, EcucDataList datas, string filter = "")
         {
+            // Handle input
             Bswmd = bswmd;
             Datas = datas;
+
+            // Clear existing ui
             Columns.Clear();
             Rows.Clear();
 
+            // Add required ShortName column
             Columns.Add("ShortName", "ShortName");
 
             if (bswmd is EcucBswmdContainer bswmdContainer)
             {
+                // Add all single parameter
                 foreach (var bswmdPara in bswmdContainer.Paras)
                 {
                     if (bswmdPara.IsSingle == true)
@@ -247,7 +334,7 @@ namespace Ecuc.EcucUi
                         Columns.Add(bswmdPara.AsrPathShort, bswmdPara.AsrPathShort);
                     }
                 }
-
+                // Add all single reference
                 foreach (var bswmdRef in bswmdContainer.Refs)
                 {
                     if (bswmdRef.IsSingle == true)
@@ -257,6 +344,7 @@ namespace Ecuc.EcucUi
                 }
             }
 
+            // Parse filter expression
             var filterDict = new Dictionary<string, string>();
             var filters = filter.Split('|');
             foreach (var f in filters)
@@ -268,6 +356,7 @@ namespace Ecuc.EcucUi
                 }
             }
 
+            // Filter data
             FilteredDatas = Datas;
             if (filterDict.Count > 0)
             {
@@ -283,27 +372,33 @@ namespace Ecuc.EcucUi
                     else
                     {
                         var query = from data in FilteredDatas
-                                    where data[f.Key].FirstText.Contains(f.Value)
+                                    where data[f.Key].FirstValue.Contains(f.Value)
                                     select data;
                         FilteredDatas = new EcucDataList(query.ToList());
                     }
                 }
             }
-
+            // Update row number
             RowCount = FilteredDatas.Count;
         }
 
+        /// <summary>
+        /// Cell value update handler.
+        /// </summary>
+        /// <param name="sender">Not needed.</param>
+        /// <param name="e">Updated cell information.</param>
         private void CellValueNeededEventHandler(object? sender, DataGridViewCellValueEventArgs e)
         {
             if (e.ColumnIndex == 0)
             {
+                // First column is ShortName
                 e.Value = FilteredDatas[e.RowIndex].Value;
             }
             else
             {
                 try
                 {
-                    e.Value = FilteredDatas[e.RowIndex][Columns[e.ColumnIndex].Name].FirstText;
+                    e.Value = FilteredDatas[e.RowIndex][Columns[e.ColumnIndex].Name].FirstValue;
                 }
                 catch
                 {

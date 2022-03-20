@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 Dai Jin Shi E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,29 +18,53 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using Ecuc.EcucBase.EBswmd;
-using Ecuc.EcucBase.EData;
-using Ecuc.EcucBase.EInstance;
-using System.ComponentModel;
 using System.Text;
 
 namespace Ecuc.EcucUi
 {
+    /// <summary>
+    /// RichTextBox to display console information
+    /// </summary>
     public class ConsoleRichTextBox : TextWriter
     {
+        /// <summary>
+        /// Embedded rich textbox.
+        /// </summary>
         RichTextBox TextBox { get; }
+        /// <summary>
+        /// Write delegate type.
+        /// </summary>
+        /// <param name="value">Value to display.</param>
         delegate void WriteFunc(string value);
-        WriteFunc writeFunc;
-        WriteFunc writeLineFunc;
+        /// <summary>
+        /// Write function.
+        /// </summary>
+        private readonly WriteFunc writeFunc;
+        /// <summary>
+        /// Write line function.
+        /// </summary>
+        private readonly WriteFunc writeLineFunc;
+        /// <summary>
+        /// Popup menu in rich textbox.
+        /// </summary>
         private readonly ContextMenuStrip cm;
+        /// <summary>
+        /// Clear menu item.
+        /// </summary>
         private readonly ToolStripMenuItem cmClear;
 
+        /// <summary>
+        /// Initialize console rich textbox.
+        /// </summary>
+        /// <param name="textBox">embedded rich textbox.</param>
         public ConsoleRichTextBox(RichTextBox textBox)
         {
+            // Handle input
             TextBox = textBox;
             writeFunc = Write;
             writeLineFunc = WriteLine;
 
+            // Prepare controls.
             cm = new ContextMenuStrip();
             cmClear = new ToolStripMenuItem();
 
@@ -56,6 +80,9 @@ namespace Ecuc.EcucUi
             TextBox.ContextMenuStrip = cm;
         }
 
+        /// <summary>
+        /// Encoding in UTF-8.
+        /// </summary>
         public override Encoding Encoding
         {
             get
@@ -64,6 +91,10 @@ namespace Ecuc.EcucUi
             }
         }
 
+        /// <summary>
+        /// Write function.
+        /// </summary>
+        /// <param name="value">Value to write.</param>
         public override void Write(string? value)
         {
             if (value == null)
@@ -77,10 +108,14 @@ namespace Ecuc.EcucUi
             }
             else
             {
-                TextBox.AppendText(value);
+                TextBox.AppendText($"[{DateTime.Now}]{value}");
             }
         }
 
+        /// <summary>
+        /// Write line function.
+        /// </summary>
+        /// <param name="value">Value to write.</param>
         public override void WriteLine(string? value)
         {
             if (value == null)
@@ -94,11 +129,15 @@ namespace Ecuc.EcucUi
             }
             else
             {
-                TextBox.AppendText(value);
-                TextBox.AppendText(NewLine);
+                TextBox.AppendText($"[{DateTime.Now}]{value}{NewLine}");
             }
         }
 
+        /// <summary>
+        /// Clear operation to clear all texts in console.
+        /// </summary>
+        /// <param name="sender">Not used.</param>
+        /// <param name="e">Not used.</param>
         private void CmClearEventHandler(object? sender, MouseEventArgs e)
         {
             TextBox.Clear();
