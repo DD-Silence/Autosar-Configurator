@@ -335,7 +335,7 @@
             this.MainMenuStrip = this.menuStrip1;
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "WdMain";
-            this.Text = "Autosar Configurator V1.1";
+            this.Text = "Autosar Configurator V1.2";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.WdMain_FormClosing);
             this.Load += new System.EventHandler(this.WdMain_Load);
             this.splitContainer1.Panel1.ResumeLayout(false);

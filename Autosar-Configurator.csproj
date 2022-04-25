@@ -30,12 +30,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="EcucBase\EcucUi.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CS-Script.Core" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="EcucBaseCore">
-      <HintPath>lib\EcucBaseCore.dll</HintPath>
+    <Reference Include="Autosar">
+      <HintPath>lib\Autosar.dll</HintPath>
+    </Reference>
+    <Reference Include="XObjectsCore">
+      <HintPath>lib\XObjectsCore.dll</HintPath>
     </Reference>
   </ItemGroup>
 
