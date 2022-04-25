@@ -1,4 +1,4 @@
-# Autosar-Configurator
+# Autosar-Configurator V1.2.0 release
     First open source Autosar compliant configurator with the following features,
     * Fast and low memory usage.
     * Compliant with Vector, Mentor SIP package. Review arxml from SIP as well as Autosar.
