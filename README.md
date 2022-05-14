@@ -30,5 +30,5 @@ Operation can refer [Basic Operation](/manual/operation/basic_operation.md)
 Folder structure can refer [Folder Structure](/manual/operation/folder.md)
 
 ## Script
-Manual not ready.
+Script can refer [Script](/manual/operation/script.md)
 
