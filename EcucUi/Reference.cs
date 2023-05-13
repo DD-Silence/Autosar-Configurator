@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2023 DJS Studio E-mail:ddsilence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -81,7 +81,7 @@ namespace AutosarConfigurator
                 // Record selected items to tag and close form
                 foreach (ListViewItem selectItem in lv.SelectedItems)
                 {
-                    if (selectItem.Tag is IEcucInstanceModule instance)
+                    if (selectItem.Tag is IEcucInstanceHasContainer instance)
                     {
                         if (output.ContainsKey(instance.BswmdPathShort) == false)
                         {
@@ -182,7 +182,7 @@ namespace AutosarConfigurator
                     var c = lvCandidate.Columns.Add(pair.Key.ShortName);
                     foreach (var candidate in candidates)
                     {
-                        if (candidate is IEcucInstanceModule candidateModule)
+                        if (candidate is IEcucInstanceHasContainer candidateModule)
                         {
                             bool findExist = false;
                             foreach (var pathExist in pair.Value)

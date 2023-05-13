@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2023 DJS Studio E-mail:ddsilence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 using Ecuc.EcucBase.EBase;
 using Ecuc.EcucBase.EBswmd;
 using Ecuc.EcucBase.EInstance;
+using GenTool_CsDataServerDomAsr4.Iface;
 using System.ComponentModel;
 using System.Numerics;
 
@@ -147,44 +148,6 @@ namespace Ecuc.EcucBase.EData
         private IEcucBswmdBase Bswmd { get; }
 
         /// <summary>
-        /// Whether data is invalid.
-        /// </summary>
-        public bool ValidStatus
-        {
-            get
-            {
-                return Instance.Valid.ValidRecursive.Count == 0;
-            }
-        }
-
-        /// <summary>
-        /// Whether data is invalid.
-        /// </summary>
-        public string ValidInfo
-        {
-            get
-            {
-                string result = "";
-                foreach (var v in Instance.Valid.ValidRecursive)
-                {
-                    result += $"{v.Info}{Environment.NewLine}";
-                }
-                return result;
-            }
-        }
-
-        /// <summary>
-        /// Whether data is invalid.
-        /// </summary>
-        public List<EcucValid> ValidRecursive
-        {
-            get
-            {
-                return Instance.Valid.ValidRecursive;
-            }
-        }
-
-        /// <summary>
         /// Short form of AsrPath
         /// </summary>
         public string AsrPathShort
@@ -280,11 +243,11 @@ namespace Ecuc.EcucBase.EData
         /// <summary>
         /// EcucInstance as IEcucInstanceModule.
         /// </summary>
-        private IEcucInstanceModule InstanceAsModule
+        private IEcucInstanceHasContainer InstanceAsModule
         {
             get
             {
-                if (Instance is IEcucInstanceModule container)
+                if (Instance is IEcucInstanceHasContainer container)
                 {
                     return container;
                 }
@@ -298,11 +261,11 @@ namespace Ecuc.EcucBase.EData
         /// <summary>
         /// EcucBswmd as IEcucBswmdModule.
         /// </summary>
-        private IEcucBswmdModule BswmdAsModule
+        private IEcucBswmdHasContainer BswmdAsModule
         {
             get
             {
-                if (Bswmd is IEcucBswmdModule container)
+                if (Bswmd is IEcucBswmdHasContainer container)
                 {
                     return container;
                 }
@@ -374,7 +337,7 @@ namespace Ecuc.EcucBase.EData
         /// <summary>
         /// Continers in EcucInstance
         /// </summary>
-        public List<IEcucInstanceModule> Containers
+        public List<IEcucInstanceHasContainer> Containers
         {
             get
             {
@@ -385,7 +348,7 @@ namespace Ecuc.EcucBase.EData
         /// <summary>
         /// Parameters in EcucInstance
         /// </summary>
-        public List<IEcucInstanceParam> Paras
+        public List<IEcucInstanceParameterBase> Paras
         {
             get
             {
@@ -396,7 +359,7 @@ namespace Ecuc.EcucBase.EData
         /// <summary>
         /// References in EcucInstance
         /// </summary>
-        public List<IEcucInstanceReference> Refs
+        public List<IEcucInstanceReferenceBase> Refs
         {
             get
             {
@@ -407,7 +370,7 @@ namespace Ecuc.EcucBase.EData
         /// <summary>
         /// Continers in EcucBswmd
         /// </summary>
-        public List<IEcucBswmdModule> BswmdContainers
+        public List<IEcucBswmdContainer> BswmdContainers
         {
             get
             {
@@ -440,7 +403,7 @@ namespace Ecuc.EcucBase.EData
         /// <summary>
         /// The reference point to Autosar path
         /// </summary>
-        public List<IEcucInstanceReference> Usage
+        public List<IEcucInstanceReferenceBase> Usage
         {
             get
             {
@@ -450,7 +413,7 @@ namespace Ecuc.EcucBase.EData
                 }
                 catch
                 {
-                    return new List<IEcucInstanceReference>();
+                    return new List<IEcucInstanceReferenceBase>();
                 }
             }
         }
@@ -468,11 +431,11 @@ namespace Ecuc.EcucBase.EData
         /// <summary>
         /// Sort containers in EcucInstance according to IEcucBswmdModule
         /// </summary>
-        public Dictionary<IEcucBswmdModule, EcucDataList> SortedContainers
+        public Dictionary<IEcucBswmdHasContainer, EcucDataList> SortedContainers
         {
             get
             {
-                var result = new Dictionary<IEcucBswmdModule, EcucDataList>();
+                var result = new Dictionary<IEcucBswmdHasContainer, EcucDataList>();
                 // Iterate bswmd containers in bswmd container
                 foreach (var bswmdSubContainer in BswmdAsModule.Containers)
                 {
@@ -550,11 +513,11 @@ namespace Ecuc.EcucBase.EData
                 switch (Instance)
                 {
                     // For IEcucInstanceModule, ShortName will be returned
-                    case IEcucInstanceModule instanceContainer:
+                    case IEcucInstanceHasContainer instanceContainer:
                         return instanceContainer.AsrPathShort;
 
                     // For IEcucInstanceParam, further handle is needed
-                    case IEcucInstanceParam instancePara:
+                    case IEcucInstanceParameterBase instancePara:
                         switch (Instance)
                         {
                             // For EcucInstanceNumericalParamValue
@@ -603,7 +566,7 @@ namespace Ecuc.EcucBase.EData
                         }
 
                     // For IEcucInstanceReference, ValueRef will be returned
-                    case IEcucInstanceReference instanceRef:
+                    case IEcucInstanceReferenceBase instanceRef:
                         return instanceRef.ValueRef;
 
                     default:
@@ -614,11 +577,11 @@ namespace Ecuc.EcucBase.EData
             {
                 switch (Instance)
                 {
-                    case IEcucInstanceModule instanceContainer:
+                    case IEcucInstanceHasContainer instanceContainer:
                         instanceContainer.ShortName = value;
                         break;
 
-                    case IEcucInstanceParam instancePara:
+                    case IEcucInstanceParameterBase instancePara:
                         switch (Instance)
                         {
                             case EcucInstanceNumericalParamValue:
@@ -656,7 +619,7 @@ namespace Ecuc.EcucBase.EData
                         }
                         break;
 
-                    case IEcucInstanceReference instanceRef:
+                    case IEcucInstanceReferenceBase instanceRef:
                         instanceRef.ValueRef = value;
                         break;
 
@@ -714,6 +677,9 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public string ValueShort
         {
             get
@@ -733,31 +699,38 @@ namespace Ecuc.EcucBase.EData
                 RaisePropertyChanged();
             }
         }
-
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="bswmd"></param>
         public EcucData(IEcucInstanceBase instance, IEcucBswmdBase bswmd)
         {
             Instance = instance;
             Bswmd = bswmd;
-
-            Instance.PropertyChanged += PropertyChangedEventHandler;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="isntanceManager"></param>
+        /// <param name="bswmdManager"></param>
+        /// <param name="name"></param>
+        /// <exception cref="Exception"></exception>
         public EcucData(EcucInstanceManager isntanceManager, EcucBswmdManager bswmdManager, string name)
         {
-            var instanceModule = isntanceManager[name];
-            if (instanceModule == null)
-            {
-                throw new Exception($"Can not get instance with name {name}");
-            }
-            var bswmdModule = bswmdManager.GetBswmdFromBswmdPath(instanceModule.BswmdPath);
-            if (bswmdModule == null)
-            {
-                throw new Exception($"Can not get bswmd with path {instanceModule.BswmdPath}");
-            }
+            var instanceModule = isntanceManager[name] ?? throw new Exception($"Can not get instance with name {name}");
+            var bswmdModule = bswmdManager.GetBswmdFromBswmdPath(instanceModule.BswmdPath) ?? throw new Exception($"Can not get bswmd with path {instanceModule.BswmdPath}");
             Instance = instanceModule;
             Bswmd = bswmdModule;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public EcucDataList this[string key]
         {
             get
@@ -768,9 +741,9 @@ namespace Ecuc.EcucBase.EData
                     var bswmdGet = Bswmd.GetBswmdFromBswmdPath($"{Instance.BswmdPath}/{key}");
                     switch (bswmdGet)
                     {
-                        case IEcucBswmdModule:
+                        case IEcucBswmdHasContainer:
                             {
-                                if (Instance is IEcucInstanceModule instanceContainer && Bswmd is IEcucBswmdModule bswmdContainer)
+                                if (Instance is IEcucInstanceHasContainer instanceContainer && Bswmd is IEcucBswmdHasContainer bswmdContainer)
                                 {
                                     var query = from container in instanceContainer.Containers
                                                 where container.BswmdPathShort == key
@@ -815,6 +788,12 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public EcucDataList this[string key, string name]
         {
             get
@@ -825,9 +804,9 @@ namespace Ecuc.EcucBase.EData
                     var bswmdGet = Bswmd.GetBswmdFromBswmdPath($"{Instance.BswmdPath}/{key}");
                     switch (bswmdGet)
                     {
-                        case IEcucBswmdModule:
+                        case IEcucBswmdHasContainer:
                             {
-                                if (Instance is IEcucInstanceModule instanceContainer && Bswmd is IEcucBswmdModule bswmdContainer)
+                                if (Instance is IEcucInstanceHasContainer instanceContainer && Bswmd is IEcucBswmdHasContainer bswmdContainer)
                                 {
                                     var query = from container in instanceContainer.Containers
                                                 where container.BswmdPathShort == key
@@ -874,7 +853,18 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         public delegate bool FilterFunc(EcucData data);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="func"></param>
+        /// <returns></returns>
         public EcucDataList this[string key, FilterFunc func]
         {
             get
@@ -885,9 +875,9 @@ namespace Ecuc.EcucBase.EData
                     var bswmdGet = Bswmd.GetBswmdFromBswmdPath($"{Instance.BswmdPath}/{key}");
                     switch (bswmdGet)
                     {
-                        case IEcucBswmdModule:
+                        case IEcucBswmdHasContainer:
                             {
-                                if (Instance is IEcucInstanceModule instanceContainer && Bswmd is IEcucBswmdModule bswmdContainer)
+                                if (Instance is IEcucInstanceHasContainer instanceContainer && Bswmd is IEcucBswmdHasContainer bswmdContainer)
                                 {
                                     var query = from container in instanceContainer.Containers
                                                 where container.BswmdPathShort == key
@@ -937,7 +927,7 @@ namespace Ecuc.EcucBase.EData
 
         private string RecommendedName(string bswmdPathShort)
         {
-            if (Bswmd is IEcucBswmdModule bswmd && Instance is IEcucInstanceModule instance)
+            if (Bswmd is IEcucBswmdHasContainer bswmd && Instance is IEcucInstanceHasContainer instance)
             {
                 foreach (var bswmdSubContainer in bswmd.Containers)
                 {
@@ -989,14 +979,27 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <returns></returns>
         public EcucData AddContainer(string bswmdPathShort)
         {
             return AddContainer(bswmdPathShort, RecommendedName(bswmdPathShort));
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <param name="shortName"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        /// <exception cref="Exception"></exception>
         public EcucData AddContainer(string bswmdPathShort, string shortName)
         {
-            if (Bswmd is IEcucBswmdModule bswmdContainerContainer && Instance is IEcucInstanceModule instanceContainerContainer)
+            if (Bswmd is IEcucBswmdHasContainer bswmdContainerContainer && Instance is IEcucInstanceHasContainer instanceContainerContainer)
             {
                 foreach (var bswmd in bswmdContainerContainer.Containers)
                 {
@@ -1038,9 +1041,15 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public int DelContainer(string bswmdPathShort)
         {
-            if (Bswmd is IEcucBswmdModule bswmdContainerContainer && Instance is IEcucInstanceModule instanceContainerContainer)
+            if (Bswmd is IEcucBswmdHasContainer bswmdContainerContainer && Instance is IEcucInstanceHasContainer instanceContainerContainer)
             {
                 foreach (var bswmd in bswmdContainerContainer.Containers)
                 {
@@ -1065,9 +1074,16 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <param name="shortName"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public int DelContainer(string bswmdPathShort, string shortName)
         {
-            if (Bswmd is IEcucBswmdModule bswmdContainerContainer && Instance is IEcucInstanceModule instanceContainerContainer)
+            if (Bswmd is IEcucBswmdHasContainer bswmdContainerContainer && Instance is IEcucInstanceHasContainer instanceContainerContainer)
             {
                 foreach (var bswmd in bswmdContainerContainer.Containers)
                 {
@@ -1092,14 +1108,27 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <returns></returns>
         public EcucData AddContainerWithRequiredField(string bswmdPathShort)
         {
             return AddContainerWithRequiredField(bswmdPathShort, RecommendedName(bswmdPathShort));
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <param name="shortName"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        /// <exception cref="Exception"></exception>
         public EcucData AddContainerWithRequiredField(string bswmdPathShort, string shortName)
         {
-            if (Bswmd is IEcucBswmdModule bswmdContainerContainer && Instance is IEcucInstanceModule instanceContainerContainer)
+            if (Bswmd is IEcucBswmdHasContainer bswmdContainerContainer && Instance is IEcucInstanceHasContainer instanceContainerContainer)
             {
                 foreach (var bswmd in bswmdContainerContainer.Containers)
                 {
@@ -1187,11 +1216,16 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="chain"></param>
+        /// <returns></returns>
         public List<EcucData> ContainerChain(Dictionary<string, string> chain)
         {
             var result = new List<EcucData>();
 
-            if (Instance is IEcucInstanceModule instanceContainerContainer)
+            if (Instance is IEcucInstanceHasContainer instanceContainerContainer)
             {
                 EcucData data = this;
                 foreach (var kvp in chain)
@@ -1220,6 +1254,14 @@ namespace Ecuc.EcucBase.EData
             return result;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        /// <exception cref="NotImplementedException"></exception>
         public EcucData AddPara(string bswmdPathShort, string value)
         {
             if (Bswmd is IEcucBswmdContainer bswmdContainerContainer && Instance is IEcucInstanceContainer instanceContainerContainer)
@@ -1351,6 +1393,13 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        /// <exception cref="Exception"></exception>
         public EcucData AddPara(string bswmdPathShort)
         {
             if (Bswmd is IEcucBswmdContainer bswmdContainerContainer && Instance is IEcucInstanceContainer instanceContainerContainer)
@@ -1430,6 +1479,11 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="chain"></param>
+        /// <returns></returns>
         public List<EcucData> ParaChain(Dictionary<string, string> chain)
         {
             var result = new List<EcucData>();
@@ -1441,6 +1495,13 @@ namespace Ecuc.EcucBase.EData
             return result;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <param name="value"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        /// <exception cref="Exception"></exception>
         public void DelPara(string bswmdPathShort, string value)
         {
             if (Bswmd is IEcucBswmdContainer bswmdOtherContainer && Instance is IEcucInstanceContainer instanceOtherContainer)
@@ -1494,6 +1555,12 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPath"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        /// <exception cref="Exception"></exception>
         public void DelPara(string bswmdPath)
         {
             if (Bswmd is IEcucBswmdContainer bswmdOtherContainer && Instance is IEcucInstanceContainer instanceOtherContainer)
@@ -1547,6 +1614,15 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <param name="value"></param>
+        /// <param name="typ"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        /// <exception cref="NotImplementedException"></exception>
         public EcucData AddRef(string bswmdPathShort, string value, string typ = "")
         {
             if (Bswmd is IEcucBswmdContainer bswmdOtherContainer && Instance is IEcucInstanceContainer instanceOtherContainer)
@@ -1563,21 +1639,21 @@ namespace Ecuc.EcucBase.EData
                                 {
                                     case EcucBswmdRef bswmdRef:
                                         {
-                                            var reference = instanceContainer.AddReference(bswmdPathShort, "ECUC-REFERENCE-DEF", value, bswmdRef.Dest);
+                                            var reference = instanceContainer.AddReference(bswmdPathShort, ReferrableType.tEcucReferenceDef, value, bswmdRef.Dest);
                                             RaisePropertyChanged();
                                             return new EcucData(reference, bswmd);
                                         }
 
                                     case EcucBswmdForeignRef bswmdForeign:
                                         {
-                                            var reference = instanceContainer.AddReference(bswmdPathShort, "ECUC-FOREIGN-REFERENCE-DEF", value, bswmdForeign.DestType);
+                                            var reference = instanceContainer.AddReference(bswmdPathShort, ReferrableType.tEcucForeignReferenceDef, value, EcucBswmdTypeConvert.BswmdToBswmdType(bswmdForeign.DestType));
                                             RaisePropertyChanged();
                                             return new EcucData(reference, bswmd);
                                         }
 
                                     case EcucBswmdSymbolicNameRef bswmdSymbolic:
                                         {
-                                            var reference = instanceContainer.AddReference(bswmdPathShort, "ECUC-SYMBOLIC-NAME-REFERENCE-DEF", value, bswmdSymbolic.Dest);
+                                            var reference = instanceContainer.AddReference(bswmdPathShort, ReferrableType.tEcucSymbolicNameReferenceDef, value, bswmdSymbolic.Dest);
                                             RaisePropertyChanged();
                                             return new EcucData(reference, bswmd);
                                         }
@@ -1588,7 +1664,8 @@ namespace Ecuc.EcucBase.EData
                                             {
                                                 if (typ == choice.Key)
                                                 {
-                                                    var reference = instanceContainer.AddReference(bswmdPathShort, choice.Value, value, choice.Key);
+                                                    
+                                                    var reference = instanceContainer.AddReference(bswmdPathShort, choice.Value, value, EcucBswmdTypeConvert.BswmdToBswmdType(choice.Key));
                                                     RaisePropertyChanged();
                                                     return new EcucData(reference, bswmd);
                                                 }
@@ -1619,6 +1696,11 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="chain"></param>
+        /// <returns></returns>
         public List<EcucData> RefChain(Dictionary<string, string> chain)
         {
             var result = new List<EcucData>();
@@ -1630,6 +1712,11 @@ namespace Ecuc.EcucBase.EData
             return result;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public EcucData DeRef()
         {
             if (Instance is EcucInstanceReferenceValue instanceRef)
@@ -1648,6 +1735,13 @@ namespace Ecuc.EcucBase.EData
             throw new Exception($"Can not dereference");
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPathShort"></param>
+        /// <param name="valueRef"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        /// <exception cref="Exception"></exception>
         public void DelRef(string bswmdPathShort, string valueRef)
         {
             if (Bswmd is IEcucBswmdContainer bswmdOtherContainer && Instance is IEcucInstanceContainer instanceOtherContainer)
@@ -1663,19 +1757,8 @@ namespace Ecuc.EcucBase.EData
                                 switch (bswmd)
                                 {
                                     case EcucBswmdRef:
-                                        instanceContainer.DelReference(bswmdPathShort, valueRef);
-                                        break;
-
-
                                     case EcucBswmdForeignRef:
-                                        instanceContainer.DelReference(bswmdPathShort, valueRef);
-                                        break;
-
-
                                     case EcucBswmdSymbolicNameRef:
-                                        instanceContainer.DelReference(bswmdPathShort, valueRef);
-                                        break;
-
                                     case EcucBswmdChoiceRef:
                                         instanceContainer.DelReference(bswmdPathShort, valueRef);
                                         break;
@@ -1703,6 +1786,12 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPath"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        /// <exception cref="Exception"></exception>
         public void DelRef(string bswmdPath)
         {
             if (Bswmd is IEcucBswmdContainer bswmdOtherContainer && Instance is IEcucInstanceContainer instanceOtherContainer)
@@ -1718,19 +1807,8 @@ namespace Ecuc.EcucBase.EData
                                 switch (bswmd)
                                 {
                                     case EcucBswmdRef:
-                                        instanceContainer.DelReference(bswmdPath);
-                                        break;
-
-
                                     case EcucBswmdForeignRef:
-                                        instanceContainer.DelReference(bswmdPath);
-                                        break;
-
-
                                     case EcucBswmdSymbolicNameRef:
-                                        instanceContainer.DelReference(bswmdPath);
-                                        break;
-
                                     case EcucBswmdChoiceRef:
                                         instanceContainer.DelReference(bswmdPath);
                                         break;
@@ -1758,40 +1836,24 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPath"></param>
+        /// <returns></returns>
         public EcucDataMultiplyStatus GetMultiplyStatus(string bswmdPath)
         {
             EcucDataMultiplyStatus.StatusType result = EcucDataMultiplyStatus.StatusType.Invalid;
             try
             {
                 var bswmd = Bswmd.GetBswmdFromBswmdPath(bswmdPath);
-                int count = 0;
-
-                switch (bswmd)
+                int count = bswmd switch
                 {
-                    case IEcucBswmdModule:
-                        {
-                            var instances = InstanceAsModule.FindContainerByBswmd(bswmdPath);
-                            count = instances.Count;
-                        }
-                        break;
-
-                    case IEcucBswmdParam:
-                        {
-                            var instances = InstanceAsContainer.FindParaByBswmd(bswmdPath);
-                            count = instances.Count;
-                        }
-                        break;
-
-                    case IEcucBswmdReference:
-                        {
-                            var instances = InstanceAsContainer.FindRefByBswmd(bswmdPath);
-                            count = instances.Count;
-                        }
-                        break;
-
-                    default:
-                        break;
-                }
+                    IEcucBswmdHasContainer => InstanceAsModule.FindContainerByBswmd(bswmdPath).Count,
+                    IEcucBswmdParam => InstanceAsContainer.FindParaByBswmd(bswmdPath).Count,
+                    IEcucBswmdReference => InstanceAsContainer.FindRefByBswmd(bswmdPath).Count,
+                    _ => 0
+                };
 
                 if (count == 0)
                 {
@@ -1827,71 +1889,16 @@ namespace Ecuc.EcucBase.EData
 
             return new EcucDataMultiplyStatus(result);
         }
-
-        void PropertyChangedEventHandler(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == "Valid")
-            {
-                RaisePropertyChanged(nameof(ValidStatus));
-            }
-        }
-
-        public void UpdateValidStatus(bool v, string vReason = "")
-        {
-            Instance.Valid.UpdateData(this);
-            Instance.Valid.UpdateValidStatus(v, vReason);
-        }
-
-        public void UpdateValidSolve(string desc, EcucSolveHandler handler, object? param=null)
-        {
-            Instance.Valid.UpdateSolve(desc, handler, param);
-        }
-
-        public void UpdateValidSolve(List<EcucSolve> solves)
-        {
-            Instance.Valid.UpdateSolve(solves);
-        }
-
-        public void ClearValidSolve()
-        {
-            Instance.Valid.ClearSolve();
-        }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class EcucDataList : List<EcucData>
     {
         /// <summary>
-        /// Wheter data is valid.
+        /// 
         /// </summary>
-        public bool ValidStatus
-        {
-            get
-            {
-                // iterate all data in datas checking Invalid
-                foreach (var data in this)
-                {
-                    if (data.ValidStatus == false)
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-
-        public string ValidInfo
-        {
-            get
-            {
-                string result = "";
-                foreach (var data in this)
-                {
-                    result += data.ValidInfo;
-                }
-                return result;
-            }
-        }
-
         public List<string> AsrPath
         {
             get
@@ -1905,6 +1912,9 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public List<string> AsrPathShort
         {
             get
@@ -1918,6 +1928,11 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public EcucDataList this[string key]
         {
             get
@@ -1928,7 +1943,7 @@ namespace Ecuc.EcucBase.EData
                     var bswmdGet = data.GetBswmdFromBswmdPath($"{data.BswmdPath}/{key}");
                     switch (bswmdGet)
                     {
-                        case IEcucBswmdModule:
+                        case IEcucBswmdHasContainer:
                             {
                                 var query = from container in data.Containers
                                             where container.BswmdPathShort == key
@@ -1967,6 +1982,12 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public EcucDataList this[string key, string name]
         {
             get
@@ -1977,7 +1998,7 @@ namespace Ecuc.EcucBase.EData
                     var bswmdGet = data.GetBswmdFromBswmdPath($"{data.BswmdPath}/{key}");
                     switch (bswmdGet)
                     {
-                        case IEcucBswmdModule:
+                        case IEcucBswmdHasContainer:
                             {
                                 var query = from container in data.Containers
                                             where container.BswmdPathShort == key
@@ -2019,7 +2040,18 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         public delegate bool SearchFunc(EcucData data);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="func"></param>
+        /// <returns></returns>
         public EcucDataList this[string key, SearchFunc func]
         {
             get
@@ -2030,7 +2062,7 @@ namespace Ecuc.EcucBase.EData
                     var bswmdGet = data.GetBswmdFromBswmdPath($"{data.BswmdPath}/{key}");
                     switch (bswmdGet)
                     {
-                        case IEcucBswmdModule:
+                        case IEcucBswmdHasContainer:
                             {
                                 var query = from container in data.Containers
                                             where container.BswmdPathShort == key
@@ -2072,11 +2104,18 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public EcucDataList()
         {
 
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="datas"></param>
         public EcucDataList(List<EcucData> datas)
         {
             foreach (var data in datas)
@@ -2085,6 +2124,9 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public List<string> Value
         {
             get
@@ -2111,6 +2153,11 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public bool ValueSingleEqual(string value)
         {
             if (Value.Count == 1)
@@ -2120,6 +2167,9 @@ namespace Ecuc.EcucBase.EData
             return false;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public EcucData First
         {
             get
@@ -2135,6 +2185,9 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public string FirstValue
         {
             get
@@ -2160,6 +2213,9 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public Int64 FirstValueAsInt
         {
             get
@@ -2182,6 +2238,10 @@ namespace Ecuc.EcucBase.EData
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public EcucDataList DeRef()
         {
             var result = new EcucDataList();
@@ -2198,6 +2258,11 @@ namespace Ecuc.EcucBase.EData
             return result;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmd"></param>
+        /// <returns></returns>
         public EcucDataMultiplyStatus GetMultiplyStatus(IEcucBswmdBase bswmd)
         {
             EcucDataMultiplyStatus.StatusType result = EcucDataMultiplyStatus.StatusType.Invalid;

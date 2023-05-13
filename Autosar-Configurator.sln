@@ -1,23 +1,25 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.1.32210.238
+VisualStudioVersion = 17.5.33627.172
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Autosar-Configurator", "Autosar-Configurator.csproj", "{023B3394-F347-4E7F-8332-3C39CFCA28E5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autosar-Configurator", "Autosar-Configurator.csproj", "{6E15C9B6-BFDB-4E15-8D41-36B7994AB7F6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x86 = Debug|x86
-		Release|x86 = Release|x86
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{023B3394-F347-4E7F-8332-3C39CFCA28E5}.Debug|x86.ActiveCfg = Debug|x86
-		{023B3394-F347-4E7F-8332-3C39CFCA28E5}.Release|x86.ActiveCfg = Release|x86
+		{6E15C9B6-BFDB-4E15-8D41-36B7994AB7F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E15C9B6-BFDB-4E15-8D41-36B7994AB7F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E15C9B6-BFDB-4E15-8D41-36B7994AB7F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E15C9B6-BFDB-4E15-8D41-36B7994AB7F6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {53FB4B24-91E0-491E-B45B-97DD990C65BF}
+		SolutionGuid = {F3F38FD7-6942-47D0-96ED-6425F5394DF7}
 	EndGlobalSection
 EndGlobal

@@ -2,55 +2,31 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net7.0-windows</TargetFramework>
     <RootNamespace>Autosar_Configurator</RootNamespace>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Platforms>x86</Platforms>
-    <AssemblyVersion>1.1.0</AssemblyVersion>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <SignAssembly>True</SignAssembly>
-    <Company>DJS Studio -- ddsilence@sina.cn</Company>
-    <Copyright>DJS Studio -- ddsilence@sina.cn All right reserved</Copyright>
-    <Version>1.1.0</Version>
-    <PackageId>Autosar-Configurator</PackageId>
-    <Authors>DJS Studio</Authors>
-    <Product>Autosar-Configurator</Product>
-    <PackageProjectUrl>https://github.com/DD-Silence/Autosar-Configurator</PackageProjectUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Example\**" />
-    <EmbeddedResource Remove="Example\**" />
-    <None Remove="Example\**" />
+    <Reference Include="GenTool_CsDataServerAsrBase">
+      <HintPath>lib\GenTool_CsDataServerAsrBase.dll</HintPath>
+    </Reference>
+    <Reference Include="GenTool_CsDataServerDomAsr4">
+      <HintPath>lib\GenTool_CsDataServerDomAsr4.dll</HintPath>
+    </Reference>
+    <Reference Include="GenTool_CsDataServerDomAsr4.XmlSerializers">
+      <HintPath>lib\GenTool_CsDataServerDomAsr4.XmlSerializers.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="EcucBase\EcucUi.cs" />
+    <Folder Include="Example\script\" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CS-Script.Core" Version="2.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Autosar">
-      <HintPath>lib\Autosar.dll</HintPath>
-    </Reference>
-    <Reference Include="XObjectsCore">
-      <HintPath>lib\XObjectsCore.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
   </ItemGroup>
 
 </Project>

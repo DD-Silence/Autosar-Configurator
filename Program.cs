@@ -1,4 +1,6 @@
-namespace AutosarConfigurator
+using AutosarConfigurator;
+
+namespace Autosar_Configurator
 {
     internal static class Program
     {

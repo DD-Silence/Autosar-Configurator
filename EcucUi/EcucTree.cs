@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2023 DJS Studio E-mail:ddsilence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -410,20 +410,14 @@ namespace Ecuc.EcucUi
                     if (name == node.Name)
                     {
                         node.TreeView.SelectedNode = node;
-                        if (node.Parent != null)
-                        {
-                            node.Parent.Expand();
-                        }
+                        node.Parent?.Expand();
                         return true;
                     }
                     else
                     {
                         if (ExpandAllNodes(node.Nodes, name) == true)
                         {
-                            if (node.Parent != null)
-                            {
-                                node.Parent.Expand();
-                            }
+                            node.Parent?.Expand();
                         }
                     }
                 }
@@ -440,7 +434,7 @@ namespace Ecuc.EcucUi
         /// <summary>
         /// Ecuc bswmd of containers.
         /// </summary>
-        public IEcucBswmdModule Bswmd;
+        public IEcucBswmdHasContainer Bswmd;
         /// <summary>
         /// Ecuc datas of containers.
         /// </summary>
@@ -451,7 +445,7 @@ namespace Ecuc.EcucUi
         /// </summary>
         /// <param name="bswmd">Ecuc bswmd of containers.</param>
         /// <param name="datas">Ecuc datas of containers.</param>
-        public EcucContainersTreeNode(IEcucBswmdModule bswmd, EcucDataList datas)
+        public EcucContainersTreeNode(IEcucBswmdHasContainer bswmd, EcucDataList datas)
         {
             // Handle input
             Bswmd = bswmd;
@@ -494,18 +488,6 @@ namespace Ecuc.EcucUi
             {
                 Parent.Nodes.Remove(this);
                 return;
-            }
-
-            // Update tooltip if needed
-            if (Datas.ValidStatus == false)
-            {
-                ToolTipText = Datas.ValidInfo;
-                ForeColor = Color.Red;
-            }
-            else
-            {
-                ToolTipText = "";
-                ForeColor = Color.Black;
             }
 
             // Check exist ui with new to decrease time
@@ -612,17 +594,6 @@ namespace Ecuc.EcucUi
             {
                 Text = Data.Value;
                 Name = Data.AsrPath;
-            }
-
-            if (Data.ValidStatus == false)
-            {
-                ToolTipText = Data.ValidInfo;
-                ForeColor = Color.Red;
-            }
-            else
-            {
-                ToolTipText = "";
-                ForeColor = Color.Black;
             }
 
             // Check existing ui with new to decease operation
@@ -854,21 +825,12 @@ namespace Ecuc.EcucUi
             {
                 if (Nodes[module.AsrPathShort] != null)
                 {
-                    if (Nodes[module.AsrPathShort].Tag is EcucData data)
+                    if (Nodes[module.AsrPathShort].Tag is EcucData _)
                     {
                         // Find node and change its text
-                        var valids = data.ValidRecursive;
                         var root = Nodes[module.AsrPathShort];
-                        root.Text = $"{root.Name} ({valids.Count})";
-
                         // Clear invalid information
                         root.Nodes.Clear();
-                        // Add invalid information
-                        foreach (var valid in valids)
-                        {
-                            var node = root.Nodes.Add(valid.Info);
-                            node.Tag = valid;
-                        }
                     }
                 }
             }
@@ -908,7 +870,7 @@ namespace Ecuc.EcucUi
                         }
                     }
                     // Display popup
-                    ContextMenuStrip.Show();
+                    ContextMenuStrip?.Show();
                 }
             }
         }

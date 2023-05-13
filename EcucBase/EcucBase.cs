@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2023 DJS Studio E-mail:ddsilence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,12 +18,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using Autosar;
 using Ecuc.EcucBase.EData;
 using Ecuc.EcucBase.EInstance;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace Ecuc.EcucBase.EBase
 {
@@ -32,8 +30,15 @@ namespace Ecuc.EcucBase.EBase
     /// </summary>
     public class NotifyPropertyChangedBase : INotifyPropertyChanged
     {
+        /// <summary>
+        /// 
+        /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="propertyName"></param>
         public void RaisePropertyChanged([CallerMemberName] string propertyName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -41,213 +46,11 @@ namespace Ecuc.EcucBase.EBase
     }
 
     /// <summary>
-    /// Asr Class represent a single arxml file
-    /// </summary>
-    public class Asr
-    {
-        /// <summary>
-        /// File name of arxml file.
-        /// </summary>
-        private string FileName { get; } = "";
-        /// <summary>
-        /// Whether arxml model is modified or not.
-        /// </summary>
-        private bool isDirty = false;
-        /// <summary>
-        /// Converted data model of arxml file.
-        /// </summary>
-        public AUTOSAR? Model { get; } = null;
-        /// <summary>
-        /// Packages of Autosar in arxml file.
-        /// </summary>
-        public List<ARPACKAGE> ArPackages { get; } = new List<ARPACKAGE>();
-        /// <summary>
-        /// ECUC modules in arxml file.
-        /// </summary>
-        public List<EcucInstanceModule> Modules { get; } = new List<EcucInstanceModule>();
-        /// <summary>
-        /// Dictionary between Autosar path and converted model.
-        /// </summary>
-        public Dictionary<string, object> AsrPathModelDict { get; } = new Dictionary<string, object>();
-
-        /// <summary>
-        /// Whether arxml model is modified or not.
-        /// </summary>
-        public bool IsDirty
-        {
-            get
-            {
-                return isDirty;
-            }
-            set
-            {
-                if (value != IsDirty)
-                {
-                    isDirty = value;
-                    // dirty from true to false shall tranfer to all modules
-                    if (value == false)
-                    {
-                        foreach (var module in Modules)
-                        {
-                            module.IsDirty = false;
-                        }
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Initialze Asr from filename.
-        /// File will be converted to data model. All Autosar packages will be extracted.
-        /// Autosar path dictionary will be generated.
-        /// </summary>
-        /// <param name="filename">Filename of file want to be converted.</param>
-        public Asr(string filename)
-        {
-            FileName = filename;
-            Model = AUTOSAR.Load(filename);
-
-            if (Model != null)
-            {
-                // get all autosar packages
-                FindAllArPackage();
-                // iterate all elements to generate Autosar path dictionary
-                CreateAsrPath();
-            }
-        }
-
-        /// <summary>
-        /// Iterate all ARPACKAGE and ARPACKAGES tag to get all Autosar package from Model.
-        /// ARPACKAGES tag can have ARPACKAGE member and ARPACKAGE tag can have ARPACKAGES member.
-        /// All ARPACKAGES and ARPACKAGE tag shall be checked to find all Autosar packages.
-        /// </summary>
-        private void FindAllArPackage()
-        {
-            if (Model == null)
-            {
-                return;
-            }
-
-            var query = from package in Model.ARPACKAGES.ARPACKAGE
-                        select package;
-            query.ToList().ForEach(x =>
-            {
-                if (x.ARPACKAGES != null)
-                {
-                    // Tag ARPACKAGE has ARPACKAGES member, step deeper.
-                    FindAllArPackage(x);
-                }
-                // Tag ARPACKAGE has no ARPACKAGES member, get it.
-                ArPackages.Add(x);
-            });
-        }
-
-        /// <summary>
-        /// Iterate all ARPACKAGE and ARPACKAGES tag to get all Autosar package from ARPACKAGE.
-        /// </summary>
-        /// <param name="arPackage">Autosar package to be checked</param>
-        private void FindAllArPackage(ARPACKAGE arPackage)
-        {
-            var query = from package in arPackage.ARPACKAGES.ARPACKAGE
-                        select package;
-            query.ToList().ForEach(x =>
-            {
-                if (x.ARPACKAGES != null)
-                {
-                    // Tag ARPACKAGE has ARPACKAGES member, step deeper.
-                    FindAllArPackage(x);
-                }
-                // Tag ARPACKAGE has no ARPACKAGES member, get it.
-                ArPackages.Add(x);
-            });
-        }
-
-        /// <summary>
-        /// Iterate all tag in Model to genereate Autosar path dictionary.
-        /// Any tag has SHORTNAME member can be treated as a dictionary.
-        /// SHORTNAME with seperator "/" from top can idenfify tags in Model.
-        /// as directory path in file system.
-        /// </summary>
-        private void CreateAsrPath()
-        {
-            string asrPath = "";
-            if (Model != null)
-            {
-                // start from top with ARPACKAGES tag
-                CreateAsrPath(Model.ARPACKAGES, asrPath);
-            }
-        }
-
-        /// <summary>
-        /// Iterate all tag in model to genereate Autosar path dictionary.
-        /// Any tag has SHORTNAME member can be treated as a dictionary.
-        /// SHORTNAME with seperator "/" from top can idenfify tags in Model.
-        /// </summary>
-        /// <param name="model">model to be checked</param>
-        /// <param name="asrPath">current Autosar path</param>
-        private void CreateAsrPath(object model, string asrPath)
-        {
-            // Reflect all properties to get SHORTNAME in model
-            foreach (var prop in model.GetType().GetProperties())
-            {
-                if (prop.Name == "SHORTNAME")
-                {
-                    // Property with member "SHORTNAME"
-                    if (prop.GetValue(model) is IDENTIFIER identifier)
-                    {
-                        // It is an IDENTIFIER instance, generate new path and put it into dictionary
-                        asrPath += $"/{identifier.TypedValue}";
-                        AsrPathModelDict.Add(asrPath, model);
-                    }
-                }
-            }
-
-            // Reflect all properties to decide it is needed to check deeper
-            foreach (var prop in model.GetType().GetProperties())
-            {
-                if ((prop.PropertyType.Namespace == "Autosar") || (prop.PropertyType.Namespace == "System.Collections.Generic"))
-                {
-                    // Property with namespace "Autosar" or it is a Generic Collection instance
-                    var v = prop.GetValue(model);
-                    if ((v != null) && (prop.Name != "SHORTNAME"))
-                    {
-                        // Property is not null and not "SHORTNAME"
-                        if (v is IEnumerable<object> valueList)
-                        {
-                            // Property is a Generic Collection instance, check each member deeper
-                            foreach (var v2 in valueList)
-                            {
-                                CreateAsrPath(v2, asrPath);
-                            }
-                        }
-                        else
-                        {
-                            // Property is not Generic Collection instance, check it deeper
-                            CreateAsrPath(v, asrPath);
-                        }
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Save model to file.
-        /// After save, all module shall make IsDirty to false.
-        /// </summary>
-        public void Save()
-        {
-            if (FileName != "" && Model != null)
-            {
-                Model.Save(FileName);
-                IsDirty = false;
-            }
-        }
-    }
-
-    /// <summary>
     /// Ecuc solve action handler delegate to invalid data.
     /// </summary>
     /// <param name="data">Ecuc data to solve invalid.</param>
+    /// <param name="param"></param>
+    /// 
     public delegate void EcucSolveHandler(EcucData data, object? param);
 
     /// <summary>
@@ -364,61 +167,6 @@ namespace Ecuc.EcucBase.EBase
         }
 
         /// <summary>
-        /// Recursice valid from this level to bottom.
-        /// </summary>
-        public List<EcucValid> ValidRecursive
-        {
-            get
-            {
-                var result = new List<EcucValid>();
-                // Module asks containers
-                if (Instance is EcucInstanceModule instanceModule)
-                {
-                    foreach (var container in instanceModule.Containers)
-                    {
-                        if (container.Valid.ValidRecursive.Count > 0)
-                        {
-                            result.AddRange(container.Valid.ValidRecursive);
-                        }
-                    }
-                }
-
-                // Container asks containers, parameters and references
-                if (Instance is EcucInstanceContainer instanceContainer)
-                {
-                    foreach (var container in instanceContainer.Containers)
-                    {
-                        if (container.Valid.ValidRecursive.Count > 0)
-                        {
-                            result.AddRange(container.Valid.ValidRecursive);
-                        }
-                    }
-                    foreach (var para in instanceContainer.Paras)
-                    {
-                        if (para.Valid.ValidRecursive.Count > 0)
-                        {
-                            result.AddRange(para.Valid.ValidRecursive);
-                        }
-                    }
-                    foreach (var reference in instanceContainer.Refs)
-                    {
-                        if (reference.Valid.ValidRecursive.Count > 0)
-                        {
-                            result.AddRange(reference.Valid.ValidRecursive);
-                        }
-                    }
-                }
-
-                if (valid == false)
-                {
-                    // If self valid is false, add self
-                    result.Add(this);
-                }
-                return result;
-            }
-        }
-
-        /// <summary>
         /// Valid infomation.
         /// </summary>
         public string Info
@@ -427,9 +175,9 @@ namespace Ecuc.EcucBase.EBase
             {
                 return Instance switch
                 {
-                    IEcucInstanceModule module => $"{module.AsrPath}: {InvalidReason}",
-                    IEcucInstanceParam param => $"{Instance.BswmdPathShort}@{param.Parent.AsrPath}: {InvalidReason}",
-                    IEcucInstanceReference reference => $"{Instance.BswmdPathShort}@{reference.Parent.AsrPath}: {InvalidReason}",
+                    IEcucInstanceHasContainer module => $"{module.AsrPath}: {InvalidReason}",
+                    IEcucInstanceParameterBase param => $"{param.Parent.BswmdPathShort}: {InvalidReason}",
+                    IEcucInstanceReferenceBase reference => $"{reference.Parent.BswmdPathShort}: {InvalidReason}",
                     _ => throw new Exception($"Invalid instance type {Instance.GetType()}"),
                 };
             }
@@ -549,10 +297,18 @@ namespace Ecuc.EcucBase.EBase
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class EcucIdRangeCheck
     {
         readonly SortedDictionary<Int64, List<EcucData>> IdDict = new();
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="data"></param>
         public void Add(Int64 id, EcucData data)
         {
             try
@@ -566,77 +322,6 @@ namespace Ecuc.EcucBase.EBase
             catch
             {
                 Console.WriteLine($"Id range add fail when add data with id {id}");
-            }
-        }
-
-        public void Check()
-        {
-            Int64 expected = 0;
-            Int64 suggested = 0;
-
-            foreach (var pair in IdDict)
-            {
-                if (pair.Key < 0)
-                {
-                    Console.WriteLine($"Id is negtive.");
-                    foreach (var data in pair.Value)
-                    {
-                        data.UpdateValidStatus(false, $"Id is negtive.");
-                        data.ClearValidSolve();
-                        data.UpdateValidSolve($"Rearrange Id to {suggested}", IdRerangeHandler, suggested);
-                        suggested++;
-                    }
-                }
-                else if (pair.Value.Count > 1)
-                {
-                    Console.WriteLine($"Id is not unique ({pair.Key}).");
-                    foreach (var data in pair.Value)
-                    {
-                        data.UpdateValidStatus(false, $"Id is not unique.");
-                        data.ClearValidSolve();
-                        data.UpdateValidSolve($"Rearrange Id to {suggested}", IdRerangeHandler, suggested);
-                        suggested++;
-                    }
-                }
-                else if (pair.Key != expected)
-                {
-                    Console.WriteLine($"Id is not consecutive.");
-                    foreach (var data in pair.Value)
-                    {
-                        data.UpdateValidStatus(false, $"Id is not consecutive.");
-                        data.ClearValidSolve();
-                        data.UpdateValidSolve($"Rearrange Id to {suggested}", IdRerangeHandler, suggested);
-                        suggested++;
-                    }
-                }
-                else
-                {
-                    foreach (var data in pair.Value)
-                    {
-                        if (expected != suggested)
-                        {
-                            Console.WriteLine($"Id shall be re-arranged.");
-                            data.UpdateValidStatus(false, $"Id shall be re-arranged.");
-                            data.ClearValidSolve();
-                            data.UpdateValidSolve($"Rearrange Id to {suggested}", IdRerangeHandler, suggested);
-                        }
-                        else
-                        {
-                            data.UpdateValidStatus(true);
-                            data.ClearValidSolve();
-                        }
-                        expected++;
-                        suggested++;
-                    }
-                }
-            }
-        }
-
-        private void IdRerangeHandler(EcucData data, object? idSuggest)
-        {
-            if (idSuggest is Int64 id)
-            {
-                data.Value = id.ToString();
             }
         }
     }

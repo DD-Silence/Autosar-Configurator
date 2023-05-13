@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2023 DJS Studio E-mail:ddsilence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,29 +18,24 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using Arxml.Model;
 using Ecuc.EcucBase.EBase;
-using Autosar;
+using Ecuc.EcucBase.EBswmd;
+using GenTool_CsDataServerDomAsr4.Iface;
+using Meta.Iface;
 using System.ComponentModel;
 
 namespace Ecuc.EcucBase.EInstance
 {
     public class CommentGroup
     {
-        public SDG Model { get; }
-
-        public string Name
-        {
-            get
-            {
-                return Model.Untyped.Value;
-            }
-        }
+        public ISdg Model { get; }
 
         public CommentGroupList Groups
         {
             get
             {
-                return new CommentGroupList(Model.SDG1);
+                return new CommentGroupList(Model.SdgContentsType.SdgList);
             }
         }
 
@@ -50,29 +45,57 @@ namespace Ecuc.EcucBase.EInstance
             {
                 var result = new Dictionary<string, string>();
 
-                foreach (var sd in Model.SD)
+                if (Model.SdgContentsTypeSpecified)
                 {
-                    result[sd.GID] = sd.Untyped.Value;
+                    foreach (var sd in Model.SdgContentsType.SdList)
+                    {
+                        result[sd.Gid] = sd.Value;
+                    }
                 }
                 return result;
             }
+            set
+            {
+                Model.SdgContentsTypeSpecified = false;
+                Model.SdgContentsTypeSpecified = true;
+                foreach (var item in Data)
+                {
+                    var sd = Model.SdgContentsType.AddNewSd();
+                    sd.Gid = item.Key;
+                    sd.Value = item.Value;
+                }
+            }
         }
 
-        public Dictionary<string, string> Ref
+        public Dictionary<string, ReferrableType> Ref
         {
             get
             {
-                var result = new Dictionary<string, string>();
+                var result = new Dictionary<string, ReferrableType>();
 
-                foreach (var sd in Model.SDXREF)
+                if (Model.SdgContentsTypeSpecified)
                 {
-                    result[sd.Untyped.Value] = sd.DEST;
+                    foreach (var sd in Model.SdgContentsType.SdxList)
+                    {
+                        result[sd.Value] = sd.DestType;
+                    }
                 }
                 return result;
             }
+            set
+            {
+                Model.SdgContentsTypeSpecified = false;
+                foreach (var item in value)
+                {
+                    var sdx = Model.SdgContentsType.AddNewSdx();
+
+                    sdx.DestType = item.Value;
+                    sdx.Value = item.Key;
+                }
+            }
         }
 
-        public CommentGroup(SDG model)
+        public CommentGroup(ISdg model)
         {
             Model = model;
         }
@@ -110,25 +133,17 @@ namespace Ecuc.EcucBase.EInstance
 
         public void SetCommentByName(string name, string value)
         {
-            var sdNew = new SD
-            {
-                GID = name
-            };
-            sdNew.Untyped.Value = value;
-            Model.SD.Add(sdNew);
+            var sd = Model.SdgContentsType.AddNewSd();
+            sd.Gid = name;
+            sd.Value = value;
         }
     }
 
     public class CommentGroupList : List<CommentGroup>
     {
-        public IList<SDG> Model { get; }
+        public ISpecializedMetaCollectionInstance<ISdg> Model { get; }
 
-        public CommentGroupList()
-        {
-            Model = new List<SDG>();
-        }
-
-        public CommentGroupList(IList<SDG> model)
+        public CommentGroupList(ISpecializedMetaCollectionInstance<ISdg> model)
         {
             Model = model;
             foreach (var m in Model)
@@ -143,7 +158,7 @@ namespace Ecuc.EcucBase.EInstance
             {
                 foreach (var sdg in Model)
                 {
-                    if (sdg.GID == name)
+                    if (sdg.Gid == name)
                     {
                         return new CommentGroup(sdg);
                     }
@@ -159,7 +174,7 @@ namespace Ecuc.EcucBase.EInstance
 
                 foreach (var sdg in Model)
                 {
-                    if (sdg.GID == name)
+                    if (sdg.Gid == name)
                     {
                         return;
                     }
@@ -170,10 +185,83 @@ namespace Ecuc.EcucBase.EInstance
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public interface IEcucInstanceBase : INotifyPropertyChanged
     {
+        /// <summary>
+        /// 
+        /// </summary>
         string BswmdPath { get; }
-        string BswmdPathShort
+        /// <summary>
+        /// 
+        /// </summary>
+        string BswmdPathShort { get; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public string DefDest { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        EcucInstanceManager Manager { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        IEcucInstanceBase GetInstanceFromAsrPath(string path);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        List<IEcucInstanceReferenceBase> GetReferenceByAsrPath(string path);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        bool IsDirty { get; }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class EcucInstanceBase : NotifyPropertyChangedBase
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public IHasDefinitionRef Model;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string BswmdPath
+        {
+            get
+            {
+                return Model.DefinitionRefSpecified ? Model.DefinitionRef.Value : "";
+            }
+            set
+            {
+                if ((value != null) && (value != BswmdPath))
+                {
+                    Model.DefinitionRef.Value = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string BswmdPathShort
         {
             get
             {
@@ -186,52 +274,130 @@ namespace Ecuc.EcucBase.EInstance
             }
         }
 
-        EcucInstanceManager Manager { get; }
-
-        IEcucInstanceBase GetInstanceFromAsrPath(string path)
+        /// <summary>
+        /// 
+        /// </summary>
+        public string DefDest
         {
-            try
+            get
             {
-                return Manager.AsrPathInstanceDict[path];
+                if (Model.DefinitionRefSpecified)
+                {
+                    Model.DefinitionRef.DestType.ToString();
+                }
+                return "";
             }
-            catch
+            set
             {
-                throw new Exception($"Can not get isntance from {path}");
+                if ((value != null) && (DefDest != value))
+                {
+                    Model.DefinitionRef.DestType = EcucBswmdTypeConvert.BswmdToBswmdType(DefDest);
+                }
             }
         }
 
-        List<IEcucInstanceReference> GetReferenceByAsrPath(string path)
+        /// <summary>
+        /// 
+        /// </summary>
+        public EcucInstanceManager Manager { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public IEcucInstanceBase GetInstanceFromAsrPath(string path)
         {
-            try
-            {
-                return Manager.InstanceReferenceDict[path];
-            }
-            catch
-            {
-                throw new Exception($"Can not get reference from {path}");
-            }
+            return Manager.GetInstanceByAsrPath(path);
         }
 
-        bool IsDirty { get; set; }
-        EcucValid Valid { get; }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public List<IEcucInstanceReferenceBase> GetReferenceByAsrPath(string path)
+        {
+            return Manager.GetReferenceByAsrPath(path);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool IsDirty { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="manager"></param>
+        public EcucInstanceBase(IHasDefinitionRef model, EcucInstanceManager manager)
+        {
+            Model = model;
+            Manager = manager;
+        }
     }
 
-    public interface IEcucInstanceModule : IEcucInstanceBase
+    /// <summary>
+    /// 
+    /// </summary>
+    public interface IEcucInstanceHasContainer : IEcucInstanceBase
     {
+        /// <summary>
+        /// 
+        /// </summary>
         string ShortName { get; set; }
+        /// <summary>
+        /// 
+        /// </summary>
         string AsrPath { get; }
+        /// <summary>
+        /// 
+        /// </summary>
         string AsrPathShort { get; }
-        List<IEcucInstanceModule> Containers { get; }
-        CommentGroupList Comment { get; set; }
+        /// <summary>
+        /// 
+        /// </summary>
+        List<IEcucInstanceHasContainer> Containers { get; }
+        CommentGroupList Comment { get; }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="shortName"></param>
+        /// <returns></returns>
         EcucInstanceContainer AddContainer(string path, string shortName);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="shortName"></param>
+        /// <returns></returns>
         int DelContainer(string path, string shortName);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
         int DelContainer(string path);
-        void DelContainer();
-        void UpdateAsrPathShort(string newName);
-        void UpdateAsrPathPrefix(string newName);
+        /// <summary>
+        /// 
+        /// </summary>
+        int DelContainer();
+        /// <summary>
+        /// 
+        /// </summary>
+        void DeleteAndRemoveFromOwner();
 
-        List<IEcucInstanceModule> FindContainerByBswmd(string bswmdPath)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPath"></param>
+        /// <returns></returns>
+        List<IEcucInstanceHasContainer> FindContainerByBswmd(string bswmdPath)
         {
             if (bswmdPath == "")
             {
@@ -248,13 +414,26 @@ namespace Ecuc.EcucBase.EInstance
         }
     }
 
-    public interface IEcucInstanceContainer : IEcucInstanceModule
+    /// <summary>
+    /// 
+    /// </summary>
+    public interface IEcucInstanceContainer : IEcucInstanceHasContainer
     {
-        List<IEcucInstanceParam> Paras { get; }
-        List<IEcucInstanceReference> Refs { get; }
-        IEcucInstanceModule Parent { get; }
+        /// <summary>
+        /// 
+        /// </summary>
+        List<IEcucInstanceParameterBase> Paras { get; }
+        /// <summary>
+        /// 
+        /// </summary>
+        List<IEcucInstanceReferenceBase> Refs { get; }
 
-        List<IEcucInstanceParam> FindParaByBswmd(string bswmdPath)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPath"></param>
+        /// <returns></returns>
+        List<IEcucInstanceParameterBase> FindParaByBswmd(string bswmdPath)
         {
             var query = from para in Paras
                         where para.BswmdPath == bswmdPath
@@ -263,7 +442,12 @@ namespace Ecuc.EcucBase.EInstance
             return query.ToList();
         }
 
-        List<IEcucInstanceReference> FindRefByBswmd(string bswmdPath)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPath"></param>
+        /// <returns></returns>
+        List<IEcucInstanceReferenceBase> FindRefByBswmd(string bswmdPath)
         {
             var query = from reference in Refs
                         where reference.BswmdPath == bswmdPath
@@ -273,17 +457,42 @@ namespace Ecuc.EcucBase.EInstance
         }
     }
 
-    public interface IEcucInstanceParam : IEcucInstanceBase
+    /// <summary>
+    /// 
+    /// </summary>
+    public interface IEcucInstanceParameterBase : IEcucInstanceBase
     {
-        IEcucInstanceModule Parent { get; }
+        /// <summary>
+        /// 
+        /// </summary>
+        IEcucInstanceContainer Parent { get; }
+        /// <summary>
+        /// 
+        /// </summary>
         string Value { get; set; }
-        public List<string> Comment { get; set; }
+        public List<string> Comment { get; }
+        /// <summary>
+        /// 
+        /// </summary>
+        void DeleteAndRemoveFromOwner();
     }
 
-    public interface IEcucInstanceReference : IEcucInstanceBase
+    /// <summary>
+    /// 
+    /// </summary>
+    public interface IEcucInstanceReferenceBase : IEcucInstanceBase
     {
-        IEcucInstanceModule Parent { get; }
+        /// <summary>
+        /// 
+        /// </summary>
+        IEcucInstanceContainer Parent { get; }
+        /// <summary>
+        /// 
+        /// </summary>
         string ValueRef { get; set; }
+        /// <summary>
+        /// 
+        /// </summary>
         string ValueRefShort
         {
             get
@@ -297,7 +506,6 @@ namespace Ecuc.EcucBase.EInstance
             }
             set
             {
-                var ValueRefOld = ValueRef;
                 var parts = ValueRef.Split('/');
                 if (parts.Length > 0)
                 {
@@ -305,47 +513,33 @@ namespace Ecuc.EcucBase.EInstance
                     {
                         parts[^1] = value;
                         ValueRef = string.Join("/", parts);
-                        Manager.InstanceReferenceDict[ValueRef] = Manager.InstanceReferenceDict[ValueRefOld];
-                        Manager.InstanceReferenceDict.Remove(ValueRefOld);
                     } 
                 }
             }
         }
-        public List<string> Comment { get; set; }
+
+        public List<string> Comment { get; }
+        /// <summary>
+        /// 
+        /// </summary>
+        void DeleteAndRemoveFromOwner();
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class EcucInstanceManager
     {
-        private readonly List<Asr> Autosars = new();
+        private readonly ArFile Autosars = new();
+        /// <summary>
+        /// 
+        /// </summary>
         public List<EcucInstanceModule> EcucModules { get; } = new();
-        public Dictionary<object, string> AsrRawAsrPathDict = new();
-        public Dictionary<string, object> AsrPathAsrRawDict = new();
-        public Dictionary<string, List<IEcucInstanceBase>> BswmdPathInstanceDict = new();
-        public Dictionary<string, IEcucInstanceBase> AsrPathInstanceDict = new();
-        public Dictionary<string, List<IEcucInstanceReference>> InstanceReferenceDict = new();
-        public Dictionary<string, AUTOSAR> FileAsrRawDict = new();
-        private bool isDirty = false;
 
-        public bool IsDirty
-        {
-            get
-            {
-                return isDirty;
-            }
-            set
-            {
-                if (value != IsDirty)
-                {
-                    isDirty = value;
-                }
-            }
-        }
-
-        public EcucInstanceManager(string content)
-        {
-            InitSingle(content);
-        }
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fileNames"></param>
         public EcucInstanceManager(string[] fileNames)
         {
             InitMultiple(fileNames);
@@ -355,163 +549,127 @@ namespace Ecuc.EcucBase.EInstance
             EcucModules = query.ToList();
         }
 
-        private void InitSingle(string content)
-        {
-            var autosar = new Asr(content);
-            Autosars.Add(autosar);
-            List<ARPACKAGE> arPackages = new();
-            foreach (var package in autosar.ArPackages)
-            {
-                arPackages.Add(package);
-            }
-
-            foreach (var value in autosar.AsrPathModelDict)
-            {
-                AsrPathAsrRawDict[value.Key] = value.Value;
-                AsrRawAsrPathDict[value.Value] = value.Key;
-            }
-
-            Monitor.Enter(EcucModules);
-            try
-            {
-                var query = from package in arPackages
-                            where package.ELEMENTS?.ECUCMODULECONFIGURATIONVALUES != null
-                            from ecucModuleValue in package.ELEMENTS.ECUCMODULECONFIGURATIONVALUES
-                            select ecucModuleValue;
-
-                query.ToList().ForEach(x => EcucModules.Add(new EcucInstanceModule(x, this, autosar)));
-            }
-            finally
-            {
-                Monitor.Exit(EcucModules);
-            }
-        }
 
         private void InitMultiple(string[] fileNames)
         {
             var tasks = new Task[fileNames.Length];
 
-            for (int i = 0; i < fileNames.Length; i++)
+            Autosars.AddFile(fileNames);
+
+            if (Autosars.root != null)
             {
-                tasks[i] = InitMultipleSingleStep1(fileNames[i]);
+                var query = from package in Autosars.root.ArPackageList
+                            from element in package.ElementList
+                            where element.IdType == ReferrableType.tEcucModuleConfigurationValues
+                            select element as IEcucModuleConfigurationValues;
+
+                query.ToList().ForEach(x =>
+                {
+                    var module = new EcucInstanceModule(x, this);
+                    EcucModules.Add(module);
+                });
             }
-            Task.WaitAll(tasks);
-
-            tasks = new Task[Autosars.Count];
-            for (int i = 0; i < Autosars.Count; i++)
-            {
-                tasks[i] = InitMultipleSingleStep2(Autosars[i]);
-            }
-            Task.WaitAll(tasks);
-
-            for (int i = 0; i < Autosars.Count; i++)
-            {
-                tasks[i] = InitMultipleSingleStep3(Autosars[i]);
-            }
-            Task.WaitAll(tasks);
         }
 
-        private Task InitMultipleSingleStep1(string fileName)
-        {
-            return Task.Run(() =>
-            {
-                var autosar = new Asr(fileName);
-                Monitor.Enter(Autosars);
-                try
-                {
-                    Autosars.Add(autosar);
-                }
-                finally
-                {
-                    Monitor.Exit(Autosars);
-                }
-            });
-        }
-
-        private Task InitMultipleSingleStep2(Asr ar)
-        {
-            return Task.Run(() =>
-            {
-                Monitor.Enter(AsrRawAsrPathDict);
-                try
-                {
-                    foreach (var value in ar.AsrPathModelDict)
-                    {
-                        if (AsrPathAsrRawDict.ContainsKey(value.Key) == false)
-                        {
-                            AsrPathAsrRawDict[value.Key] = value.Value;
-                            AsrRawAsrPathDict[value.Value] = value.Key;
-                        }
-                    }
-                }
-                finally
-                {
-                    Monitor.Exit(AsrRawAsrPathDict);
-                }
-            });
-        }
-
-        private Task InitMultipleSingleStep3(Asr ar)
-        {
-            return Task.Run(() =>
-            {
-                Monitor.Enter(EcucModules);
-                try
-                {
-                    var query = from package in ar.ArPackages
-                                where package.ELEMENTS.ECUCMODULECONFIGURATIONVALUES != null
-                                from ecucModuleValue in package.ELEMENTS.ECUCMODULECONFIGURATIONVALUES
-                                select ecucModuleValue;
-
-                    query.ToList().ForEach(x =>
-                    {
-                        var module = new EcucInstanceModule(x, this, ar);
-                        EcucModules.Add(module);
-                        ar.Modules.Add(module);
-                    });
-                }
-                finally
-                {
-                    Monitor.Exit(EcucModules);
-                }
-            });
-        }
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bswmdPath"></param>
+        /// <returns></returns>
         public List<IEcucInstanceBase> GetInstancesByBswmdPath(string bswmdPath)
         {
             var result = new List<IEcucInstanceBase>();
 
-            if (BswmdPathInstanceDict.ContainsKey(bswmdPath))
+            if (Autosars.root != null)
             {
-                result = BswmdPathInstanceDict[bswmdPath];
+                foreach (var metaObj in Autosars.root.AllObjects)
+                {
+                    if (metaObj is IHasDefinitionRef hasDefinition)
+                    {
+                        if ((hasDefinition.DefinitionRefSpecified) && (hasDefinition.DefinitionRef.Value == bswmdPath))
+                        {
+                            result.Add(metaObj switch
+                            {
+                                IEcucModuleConfigurationValues moduleConfiguration => new EcucInstanceModule(moduleConfiguration, this),
+                                IEcucContainerValue container => new EcucInstanceContainer(container, this),
+                                IEcucTextualParamValue textualParam => new EcucInstanceTextualParamValue(textualParam, this),
+                                IEcucNumericalParamValue numericalParam => new EcucInstanceNumericalParamValue(numericalParam, this),
+                                IEcucReferenceValue reference => new EcucInstanceReferenceValue(reference, this),
+                                _ => throw new Exception($"Invalid type when instance with bswmd path {bswmdPath}")
+                            });
+                        }
+                    }
+                }
             }
             return result;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public IEcucInstanceBase GetInstanceByAsrPath(string path)
         {
-            try
+            if (Autosars.root != null)
             {
-                return AsrPathInstanceDict[path];
+                var metaObjs = Autosars.root.Find(path);
+
+                if (metaObjs.Count > 0)
+                {
+                    foreach (var metaObj in metaObjs)
+                    {
+                        return metaObj switch
+                        {
+                            IEcucModuleConfigurationValues moduleConfiguration => new EcucInstanceModule(moduleConfiguration, this),
+                            IEcucContainerValue containerValue => new EcucInstanceContainer(containerValue, this),
+                            _ => throw new Exception($"Invalid type when find instance path {path}")
+                        };
+                    }
+                }
             }
-            catch
-            {
-                throw new Exception($"Can not get isntance from {path}");
-            }
+            throw new Exception($"Can not find instance path {path}");
         }
 
-        public List<IEcucInstanceReference> GetReferenceByAsrPath(string path)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public List<IEcucInstanceReferenceBase> GetReferenceByAsrPath(string path)
         {
-            try
+            List<IEcucInstanceReferenceBase> result = new();
+            if (Autosars.root != null)
             {
-                return InstanceReferenceDict[path];
+                var metaObjs = Autosars.root.Find(path);
+                if (metaObjs.Count > 0)
+                {
+                    foreach (var metaObj in metaObjs)
+                    {
+                        var referencedObjs = metaObj.ReferencedFromList;
+                        foreach (var referencedObj in referencedObjs)
+                        {
+                            var owner = referencedObj.Owner;
+                            result.Add(owner switch
+                            {
+                                IEcucReferenceValue reference => new EcucInstanceReferenceValue(reference, this),
+                            _ => throw new Exception($"Invalid type when find instance path {path}")
+                            });
+                        }
+                    }
+                    return result;
+                }
             }
-            catch
-            {
-                throw new Exception($"Can not get reference from {path}");
-            }
+            throw new Exception($"Can not get reference from {path}");
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public EcucInstanceModule? this[string name]
         {
             get
@@ -532,85 +690,232 @@ namespace Ecuc.EcucBase.EInstance
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public void Save()
         {
-            var query = from asr in Autosars
-                        where asr.IsDirty == true
-                        select asr;
-
-            var result = query.ToList();
-
-            var tasks = new Task[result.Count];
-
-            for (int i = 0; i < result.Count; i++)
-            {
-                tasks[i] = SaveSingle(result[i]);
-            }
-            Task.WaitAll(tasks);
+            Autosars.Save();
         }
+    }
 
-        private static Task SaveSingle(Asr asr)
+    /// <summary>
+    /// 
+    /// </summary>
+    public class EcucInstanceModule : EcucInstanceBase, IEcucInstanceHasContainer
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        private IEcucModuleConfigurationValues ModelLocal
         {
-            return Task.Run(() =>
+            get
             {
-                asr.Save();
-            });
+                if (Model is IEcucModuleConfigurationValues ecucModuleConfiguration)
+                {
+                    return ecucModuleConfiguration;
+                }
+                else
+                {
+                    throw new Exception("Invalid model type");
+                }
+            }
         }
 
         /// <summary>
-        /// Add object with name to dictionary.
+        /// 
         /// </summary>
-        /// <param name="name"></param>
+        public CommentGroupList Comment
+        {
+            get
+            {
+                return new CommentGroupList(ModelLocal.AdminData.SdgList);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string ShortName
+        {
+            get
+            {
+                return ModelLocal.ShortName;
+            }
+            set
+            {
+                if ((value != null) && (ShortName != value))
+                {
+                    ModelLocal.ShortName = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string AsrPath
+        {
+            get
+            {
+                return ModelLocal.AsrPath;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string AsrPathShort
+        {
+            get
+            {
+                var parts = AsrPath.Split('/');
+                if (parts.Length > 0)
+                {
+                    return parts[^1];
+                }
+                return "";
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<IEcucInstanceHasContainer> Containers
+        {
+            get
+            {
+                List<IEcucInstanceHasContainer> result = new();
+
+                foreach (var container in ModelLocal.ContainerList)
+                {
+                    result.Add(new EcucInstanceContainer(container, Manager));
+                }
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
         /// <param name="model"></param>
-        public void AddAsrPath(string name, object model)
+        /// <param name="manager"></param>
+        /// <param name="parent"></param>
+        public EcucInstanceModule(IEcucModuleConfigurationValues model, EcucInstanceManager manager)
+            :base(model, manager)
         {
-            AsrPathAsrRawDict[name] = model;
-            AsrRawAsrPathDict[model] = name;
-            if (model is IEcucInstanceBase instance)
-            {
-                AsrPathInstanceDict[name] = instance;
-            }
+
         }
 
-        public void RemoveAsrPath(string name, object model)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="shortName"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public EcucInstanceContainer AddContainer(string path, string shortName)
         {
-            AsrPathAsrRawDict.Remove(name);
-            AsrRawAsrPathDict.Remove(model);
+            var container = ModelLocal.AddNewContainer();
+            container.Definition.DestType = ReferrableType.tEcucParamConfContainerDef;
+            container.Definition.Value = $"{BswmdPath}/{path}";
+            container.ShortName = shortName;
+            container.Uuid = Guid.NewGuid().ToString();
+            //else
+            //{
+            //    throw new Exception($"Find duplicate container {shortName} when add continer");
+            //}
+            return new EcucInstanceContainer(container, Manager);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="shortName"></param>
+        /// <returns></returns>
+        public int DelContainer(string path, string shortName)
+        {
+            int count = 0;
+            foreach (var container in Containers)
+            {
+                if ((container.BswmdPath == path) && (container.ShortName == shortName))
+                {
+                    if (container is EcucInstanceContainer instanceContainer)
+                    {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public int DelContainer(string path)
+        {
+            int count = 0;
+            foreach (var container in Containers)
+            {
+                if (container.BswmdPathShort == path)
+                {
+                    if (container is EcucInstanceContainer instanceContainer)
+                    {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public int DelContainer()
+        {
+            int count = 0;
+            foreach (var container in Containers)
+            {
+                if (container is EcucInstanceContainer instanceContainer)
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void DeleteAndRemoveFromOwner()
+        {
+            ModelLocal.DeleteAndRemoveFromOwner();
         }
     }
 
-    public class EcucInstanceModule : NotifyPropertyChangedBase, IEcucInstanceModule
+    /// <summary>
+    /// 
+    /// </summary>
+    public class EcucInstanceContainer : EcucInstanceBase, IEcucInstanceContainer
     {
-        private ECUCMODULECONFIGURATIONVALUES Model { get; }
-        public EcucInstanceManager Manager { get; }
-        public Asr Parent { get; }
-        public EcucValid Valid { get; set; }
-
-        private bool isDirty = false;
-
-        public bool IsDirty
+        /// <summary>
+        /// 
+        /// </summary>
+        public IEcucContainerValue ModelLocal
         {
             get
             {
-                return isDirty;
-            }
-            set
-            {
-                if (value != IsDirty)
+                if (Model is IEcucContainerValue ecucContainer)
                 {
-                    isDirty = value;
-
-                    if (isDirty == true)
-                    {
-                        Parent.IsDirty = true;
-                    }
-                    else
-                    {
-                        foreach (var container in Containers)
-                        {
-                            container.IsDirty = false;
-                        }
-                    }
+                    return ecucContainer;
+                }
+                else
+                {
+                    throw new Exception("Invalid model type");
                 }
             }
         }
@@ -619,90 +924,42 @@ namespace Ecuc.EcucBase.EInstance
         {
             get
             {
-                if (Model.ADMINDATA == null)
-                {
-                    return new CommentGroupList();
-                }
-
-                if (Model.ADMINDATA.SDGS == null)
-                {
-                    return new CommentGroupList();
-                }
-
-                return new CommentGroupList(Model.ADMINDATA.SDGS.SDG);
-            }
-            set
-            {
-                if (value == null)
-                {
-                    return;
-                }
-
-                if (value.Count == 0)
-                {
-                    return;
-                }
-
-                if (Model.ADMINDATA == null)
-                {
-                    Model.ADMINDATA = new ADMINDATA();
-                }
-
-                if (Model.ADMINDATA.SDGS == null)
-                {
-                    Model.ADMINDATA.SDGS = new ADMINDATA.SDGSLocalType();
-                }
-
-                foreach (var item in value)
-                {
-                    Model.ADMINDATA.SDGS.SDG.Add(item.Model);
-                }
+                return new CommentGroupList(ModelLocal.AdminData.SdgList);
             }
         }
 
-        public string BswmdPath
-        {
-            get
-            {
-                return Model.DEFINITIONREF.TypedValue;
-            }
-        }
-
+        /// <summary>
+        /// 
+        /// </summary>
         public string ShortName
         {
             get
             {
-                return Model.SHORTNAME.TypedValue;
+                return ModelLocal.ShortName;
             }
             set
             {
-                if (value != null)
+                if ((value != null) && (ShortName != value))
                 {
-                    if (ShortName != value)
-                    {
-                        // cache old autosar path
-                        var asrPathOld = AsrPath;
-                        var parts = asrPathOld.Split('/');
-                        if (parts.Length > 0)
-                        {
-                            // add new path to dict
-                            UpdateAsrPathShort(value);
-                            // autosar model modify
-                            Model.SHORTNAME.TypedValue = value;
-                        }
-                    }
+                    ModelLocal.ShortName = value;
                 }
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public string AsrPath
         {
             get
             {
-                return Manager.AsrRawAsrPathDict[Model];
+                return ModelLocal.AsrPath;
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public string AsrPathShort
         {
             get
@@ -716,612 +973,174 @@ namespace Ecuc.EcucBase.EInstance
             }
         }
 
-        public List<IEcucInstanceModule> Containers { get; } = new List<IEcucInstanceModule>();
-
-        public EcucInstanceModule(ECUCMODULECONFIGURATIONVALUES model, EcucInstanceManager manager, Asr parent)
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<IEcucInstanceHasContainer> Containers
         {
-            Model = model;
-            Manager = manager;
-            Parent = parent;
-            Valid = new EcucValid(this);
-            Valid.PropertyChanged += ValidChangedEventHandler;
-
-            Monitor.Enter(Manager.BswmdPathInstanceDict);
-            try
+            get
             {
-                if (Manager.BswmdPathInstanceDict.ContainsKey(BswmdPath))
+                List<IEcucInstanceHasContainer> result = new();
+
+                foreach (var container in ModelLocal.SubContainerList)
                 {
-                    Manager.BswmdPathInstanceDict[BswmdPath].Add(this);
+                    result.Add(new EcucInstanceContainer(container, Manager));
                 }
-                else
-                {
-                    Manager.BswmdPathInstanceDict[BswmdPath] = new List<IEcucInstanceBase>() { this };
-                }
+                return result;
             }
-            finally
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<IEcucInstanceParameterBase> Paras
+        {
+            get
             {
-                Monitor.Exit(Manager.BswmdPathInstanceDict);
-            }
+                List<IEcucInstanceParameterBase> result = new();
 
-            Monitor.Enter(Manager.AsrPathInstanceDict);
-            try
-            {
-                Manager.AsrPathInstanceDict[AsrPath] = this;
-            }
-            finally
-            {
-                Monitor.Exit(Manager.AsrPathInstanceDict);
-            }
-
-            if (Model.CONTAINERS != null)
-            {
-                if (Model.CONTAINERS.ECUCCONTAINERVALUE != null)
+                foreach (var para in ModelLocal.ParameterValueList)
                 {
-                    foreach (ECUCCONTAINERVALUE container in Model.CONTAINERS.ECUCCONTAINERVALUE)
+                    result.Add(para switch
                     {
-                        Containers.Add(new EcucInstanceContainer(container, Manager, this));
-                    }
+                        IEcucTextualParamValue textualParamValue => new EcucInstanceTextualParamValue(textualParamValue, Manager),
+                        IEcucNumericalParamValue numericalParamValue => new EcucInstanceNumericalParamValue(numericalParamValue, Manager),
+                        _ => throw new Exception("Invalid model type")
+                    });
                 }
+                return result;
+            }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<IEcucInstanceReferenceBase> Refs
+        {
+            get
+            {
+                List<IEcucInstanceReferenceBase> result = new();
+
+                foreach (var reference in ModelLocal.ReferenceValueList)
+                {
+                    result.Add(reference switch
+                    {
+                        IEcucReferenceValue referenceValue => new EcucInstanceReferenceValue(referenceValue, Manager),
+                        _ => throw new Exception("Invalid model type")
+                    });
+                }
+                return result;
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="manager"></param>
+        /// <param name="parent"></param>
+        public EcucInstanceContainer(IEcucContainerValue model, EcucInstanceManager manager)
+            :base(model, manager)
+        {
+
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="shortName"></param>
+        /// <returns></returns>
         public EcucInstanceContainer AddContainer(string path, string shortName)
         {
-            var model = new ECUCCONTAINERVALUE
-            {
-                DEFINITIONREF = new ECUCCONTAINERVALUE.DEFINITIONREFLocalType
-                {
-                    DEST = "ECUC-PARAM-CONF-CONTAINER-DEF",
-                    TypedValue = $"{BswmdPath}/{path}"
-                },
-                SHORTNAME = new IDENTIFIER
-                {
-                    TypedValue = shortName
-                },
-                UUID = Guid.NewGuid().ToString()
-            };
-
-            if (Manager.AsrPathAsrRawDict.ContainsKey($"{AsrPath}/{shortName}") == false)
-            {
-                if (Model.CONTAINERS == null)
-                {
-                    Model.CONTAINERS = new ECUCMODULECONFIGURATIONVALUES.CONTAINERSLocalType();
-                }
-                Model.CONTAINERS.ECUCCONTAINERVALUE.Add(model);
-                Manager.AddAsrPath($"{AsrPath}/{shortName}", model);
-                var newContainer = new EcucInstanceContainer(model, Manager, this);
-                Containers.Add(newContainer);
-                IsDirty = true;
-                return newContainer;
-            }
-            else
-            {
-                throw new Exception($"Find duplicate container {shortName} when add continer");
-            }
+            var container = ModelLocal.AddNewSubContainer();
+            container.Definition.DestType = ReferrableType.tEcucParamConfContainerDef;
+            container.Definition.Value = $"{BswmdPath}/{path}";
+            container.ShortName = shortName;
+            container.Uuid = Guid.NewGuid().ToString();
+            return new EcucInstanceContainer(container, Manager);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="shortName"></param>
+        /// <returns></returns>
         public int DelContainer(string path, string shortName)
         {
+            int count = 0;
             foreach (var container in Containers)
             {
                 if (container.BswmdPath == path && container.ShortName == shortName)
                 {
-                    if (container is EcucInstanceContainer instanceContainer)
-                    {
-                        Manager.RemoveAsrPath(instanceContainer.AsrPath, instanceContainer);
-                        Model.CONTAINERS.ECUCCONTAINERVALUE.Remove(instanceContainer.Model);
-                        IsDirty = true;
-
-                        if (container.Containers.Count > 0)
-                        {
-                            if (container is EcucInstanceContainer instanceContainer2)
-                            {
-                                instanceContainer2.DelContainer();
-                            }
-                        }
-                    }
+                    container.DeleteAndRemoveFromOwner();
+                    count++;
                 }
             }
-
-            Containers.RemoveAll(x => x.BswmdPath == path && x.ShortName == shortName);
-            return Containers.FindAll(x => x.BswmdPath == path).Count;
+            return count;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
         public int DelContainer(string path)
         {
+            int count = 0;
             foreach (var container in Containers)
             {
                 if (container.BswmdPathShort == path)
                 {
                     if (container is EcucInstanceContainer instanceContainer)
                     {
-                        Manager.RemoveAsrPath(instanceContainer.AsrPath, instanceContainer);
-                        Model.CONTAINERS.ECUCCONTAINERVALUE.Remove(instanceContainer.Model);
-                        IsDirty = true;
-
-                        if (container.Containers.Count > 0)
-                        {
-                            if (container is EcucInstanceContainer instanceContainer2)
-                            {
-                                instanceContainer2.DelContainer();
-                            }
-                        }
+                        container.DeleteAndRemoveFromOwner();
+                        count++;
                     }
                 }
             }
-
-            Containers.RemoveAll(x => x.BswmdPath == path);
-            return Containers.FindAll(x => x.BswmdPath == path).Count;
+            return count;
         }
 
-        public void DelContainer()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public int DelContainer()
         {
+            int count = 0;
             foreach (var container in Containers)
             {
                 if (container is EcucInstanceContainer instanceContainer)
                 {
-                    Manager.RemoveAsrPath(instanceContainer.AsrPath, instanceContainer);
-                    Model.CONTAINERS.ECUCCONTAINERVALUE.Remove(instanceContainer.Model);
-                    IsDirty = true;
-
-                    if (container.Containers.Count > 0)
-                    {
-                        if (container is EcucInstanceContainer instanceContainer2)
-                        {
-                            instanceContainer2.DelContainer();
-                        }
-                    }
+                    container.DeleteAndRemoveFromOwner();
+                    count++;
                 }
             }
-            Containers.RemoveAll(x => x.BswmdPath != "");
+            return count;
         }
 
         /// <summary>
-        /// Update autosar path dictionary of container
+        /// 
         /// </summary>
-        /// <param name="newName">New short name of container</param>
-        public void UpdateAsrPathShort(string newName)
-        {
-            // Construct new autosar path
-            var asrPathOld = AsrPath;
-            var parts = AsrPath.Split("/");
-            parts[^1] = newName;
-            var asrPathNew = string.Join("/", parts);
-
-            // Check name duplication
-            if (Manager.AsrPathAsrRawDict.ContainsKey(asrPathNew))
-            {
-                throw new Exception($"Already have continer with name {newName}");
-            }
-
-            // Update AsrPathAsrRawDict
-            Manager.AsrPathAsrRawDict[asrPathNew] = Manager.AsrPathAsrRawDict[asrPathOld];
-            Manager.AsrPathAsrRawDict.Remove(asrPathOld);
-            // Update AsrRawAsrPathDict
-            Manager.AsrRawAsrPathDict[Model] = asrPathNew;
-            // Update AsrPathInstanceDict
-            Manager.AsrPathInstanceDict[asrPathNew] = Manager.AsrPathInstanceDict[asrPathOld];
-            Manager.AsrPathInstanceDict.Remove(asrPathOld);
-
-            // Updata InstanceReferenceDict, change all reference point to container
-            try
-            {
-                var usage = (this as IEcucInstanceBase).GetReferenceByAsrPath(asrPathOld);
-                foreach (var u in usage)
-                {
-                    u.ValueRef = asrPathNew;
-                }
-            }
-            catch
-            {
-
-            }
-
-            foreach (var continer in Containers)
-            {
-                continer.UpdateAsrPathPrefix(asrPathNew);
-            }
-        }
-
-        /// <summary>
-        /// Update autosar path prefix of container.
-        /// The prefix may be changed by parent container shortname changed.
-        /// </summary>
-        /// <param name="newName">New short name of container</param>
-        public void UpdateAsrPathPrefix(string newName)
-        {
-            // Construct new autosar path
-            var asrPathOld = AsrPath;
-            var parts = AsrPath.Split("/");
-            var asrPathNew = $"{newName}/{parts[^1]}";
-
-            // Check name duplication
-            if (Manager.AsrPathAsrRawDict.ContainsKey(asrPathNew))
-            {
-                throw new Exception($"Already have continer with name {newName}");
-            }
-
-            // Update AsrPathAsrRawDict
-            Manager.AsrPathAsrRawDict[asrPathNew] = Manager.AsrPathAsrRawDict[asrPathOld];
-            Manager.AsrPathAsrRawDict.Remove(asrPathOld);
-            // Update AsrRawAsrPathDict
-            Manager.AsrRawAsrPathDict[Model] = asrPathNew;
-            // Update AsrPathInstanceDict
-            Manager.AsrPathInstanceDict[asrPathNew] = Manager.AsrPathInstanceDict[asrPathOld];
-            Manager.AsrPathInstanceDict.Remove(asrPathOld);
-
-            // Updata InstanceReferenceDict, change all reference point to container
-            try
-            {
-                var usage = (this as IEcucInstanceBase).GetReferenceByAsrPath(asrPathOld);
-                foreach (var u in usage)
-                {
-                    u.ValueRef = asrPathNew;
-                }
-            }
-            catch
-            {
-
-            }
-
-            foreach (var continer in Containers)
-            {
-                continer.UpdateAsrPathPrefix(asrPathNew);
-            }
-        }
-
-        private void ValidChangedEventHandler(object? sender, PropertyChangedEventArgs e)
-        {
-            RaisePropertyChanged(nameof(Valid));
-        }
-    }
-
-    public class EcucInstanceContainer : NotifyPropertyChangedBase, IEcucInstanceContainer
-    {
-        public ECUCCONTAINERVALUE Model { get; }
-        public EcucInstanceManager Manager { get; }
-        public IEcucInstanceModule Parent { get; }
-        public EcucValid Valid { get; set; }
-
-        private bool isDirty = false;
-
-        public bool IsDirty
-        {
-            get
-            {
-                return isDirty;
-            }
-            set
-            {
-                if (value != IsDirty)
-                {
-                    isDirty = value;
-                    if (value == true)
-                    {
-                        Parent.IsDirty = true;
-                    }
-                    else
-                    {
-                        foreach (var container in Containers)
-                        {
-                            container.IsDirty = false;
-                        }
-                    }
-                }
-            }
-        }
-
-        public CommentGroupList Comment
-        {
-            get
-            {
-                if (Model.ADMINDATA == null)
-                {
-                    return new CommentGroupList();
-                }
-
-                if (Model.ADMINDATA.SDGS == null)
-                {
-                    return new CommentGroupList();
-                }
-
-                return new CommentGroupList(Model.ADMINDATA.SDGS.SDG);
-            }
-            set
-            {
-                if (value == null)
-                {
-                    return;
-                }
-
-                if (value.Count == 0)
-                {
-                    return;
-                }
-
-                if (Model.ADMINDATA == null)
-                {
-                    Model.ADMINDATA = new ADMINDATA();
-                }
-
-                if (Model.ADMINDATA.SDGS == null)
-                {
-                    Model.ADMINDATA.SDGS = new ADMINDATA.SDGSLocalType();
-                }
-
-                foreach (var item in value)
-                {
-                    Model.ADMINDATA.SDGS.SDG.Add(item.Model);
-                }
-            }
-        }
-
-        public string BswmdPath
-        {
-            get
-            {
-                return Model.DEFINITIONREF.TypedValue;
-            }
-        }
-
-        public string ShortName
-        {
-            get
-            {
-                return Model.SHORTNAME.TypedValue;
-            }
-            set
-            {
-                if (value != null)
-                {
-                    if (ShortName != value)
-                    {
-                        // cache old autosar path
-                        var asrPathOld = AsrPath;
-                        var parts = asrPathOld.Split('/');
-                        if (parts.Length > 0)
-                        {
-                            // add new path to dict
-                            UpdateAsrPathShort(value); 
-                            // autosar model modify
-                            Model.SHORTNAME.TypedValue = value;
-                        }
-                    }
-                }
-            }
-        }
-
-        public string AsrPath
-        {
-            get
-            {
-                return Manager.AsrRawAsrPathDict[Model];
-            }
-        }
-
-        public string AsrPathShort
-        {
-            get
-            {
-                var parts = AsrPath.Split('/');
-                if (parts.Length > 0)
-                {
-                    return parts[^1];
-                }
-                return "";
-            }
-        }
-
-        public List<IEcucInstanceModule> Containers { get; } = new();
-        public List<IEcucInstanceParam> Paras { get; } = new();
-        public List<IEcucInstanceReference> Refs { get; } = new();
-
-        public EcucInstanceContainer(ECUCCONTAINERVALUE model, EcucInstanceManager manager, IEcucInstanceModule parent)
-        {
-            Model = model;
-            Manager = manager;
-            Parent = parent;
-            Valid = new EcucValid(this);
-            Valid.PropertyChanged += ValidChangedEventHandler;
-
-            Monitor.Enter(Manager.BswmdPathInstanceDict);
-            try
-            {
-                if (Manager.BswmdPathInstanceDict.ContainsKey(BswmdPath))
-                {
-                    Manager.BswmdPathInstanceDict[BswmdPath].Add(this);
-                }
-                else
-                {
-                    Manager.BswmdPathInstanceDict[BswmdPath] = new List<IEcucInstanceBase>() { this };
-                }
-            }
-            finally
-            {
-                Monitor.Exit(Manager.BswmdPathInstanceDict);
-            }
-
-            Monitor.Enter(Manager.AsrPathInstanceDict);
-            try
-            {
-                Manager.AsrPathInstanceDict[AsrPath] = this;
-            }
-            finally
-            {
-                Monitor.Exit(Manager.AsrPathInstanceDict);
-            }
-
-            if (Model.SUBCONTAINERS != null)
-            {
-                if (Model.SUBCONTAINERS.ECUCCONTAINERVALUE != null)
-                {
-                    foreach (ECUCCONTAINERVALUE container in Model.SUBCONTAINERS.ECUCCONTAINERVALUE)
-                    {
-                        Containers.Add(new EcucInstanceContainer(container, Manager, this));
-                    }
-                }
-            }
-
-            if (Model.PARAMETERVALUES != null)
-            {
-                if (Model.PARAMETERVALUES.ECUCTEXTUALPARAMVALUE != null)
-                {
-                    foreach (ECUCTEXTUALPARAMVALUE para in Model.PARAMETERVALUES.ECUCTEXTUALPARAMVALUE)
-                    {
-                        Paras.Add(new EcucInstanceTextualParamValue(para, Manager, this));
-                    }
-                }
-
-                if (Model.PARAMETERVALUES.ECUCNUMERICALPARAMVALUE != null)
-                {
-                    foreach (ECUCNUMERICALPARAMVALUE para in Model.PARAMETERVALUES.ECUCNUMERICALPARAMVALUE)
-                    {
-                        Paras.Add(new EcucInstanceNumericalParamValue(para, Manager, this));
-                    }
-                }
-            }
-
-            if (Model.REFERENCEVALUES != null)
-            {
-                if (Model.REFERENCEVALUES.ECUCREFERENCEVALUE != null)
-                {
-                    foreach (ECUCREFERENCEVALUE reference in Model.REFERENCEVALUES.ECUCREFERENCEVALUE)
-                    {
-                        Refs.Add(new EcucInstanceReferenceValue(reference, Manager, this));
-                    }
-                }
-            }
-        }
-
-        public EcucInstanceContainer AddContainer(string path, string shortName)
-        {
-            var model = new ECUCCONTAINERVALUE
-            {
-                DEFINITIONREF = new ECUCCONTAINERVALUE.DEFINITIONREFLocalType
-                {
-                    DEST = "ECUC-PARAM-CONF-CONTAINER-DEF",
-                    TypedValue = $"{BswmdPath}/{path}"
-                },
-                SHORTNAME = new IDENTIFIER
-                {
-                    TypedValue = shortName
-                },
-                UUID = Guid.NewGuid().ToString()
-            };
-
-            if (Manager.AsrPathAsrRawDict.ContainsKey($"{AsrPath}/{shortName}") == false)
-            {
-                if (Model.SUBCONTAINERS == null)
-                {
-                    Model.SUBCONTAINERS = new ECUCCONTAINERVALUE.SUBCONTAINERSLocalType();
-                }
-                Model.SUBCONTAINERS.ECUCCONTAINERVALUE.Add(model);
-                Manager.AsrPathAsrRawDict[$"{AsrPath}/{shortName}"] = model;
-                Manager.AsrRawAsrPathDict[model] = $"{AsrPath}/{shortName}";
-                var newContainer = new EcucInstanceContainer(model, Manager, this);
-                Containers.Add(newContainer);
-                IsDirty = true;
-                return newContainer;
-            }
-            else
-            {
-                throw new Exception($"Find duplicate container {shortName} when add continer");
-            }
-        }
-
-        public int DelContainer(string path, string shortName)
-        {
-            foreach (var container in Containers)
-            {
-                if (container.BswmdPath == path && container.ShortName == shortName)
-                {
-                    if (container is EcucInstanceContainer instanceContainer)
-                    {
-                        Manager.AsrPathAsrRawDict.Remove(instanceContainer.AsrPath);
-                        Manager.AsrRawAsrPathDict.Remove(instanceContainer);
-                        Model.SUBCONTAINERS.ECUCCONTAINERVALUE.Remove(instanceContainer.Model);
-                        IsDirty = true;
-
-                        if (container.Containers.Count > 0)
-                        {
-                            if (container is EcucInstanceContainer instanceContainer2)
-                            {
-                                instanceContainer2.DelContainer();
-                            }
-                        }
-                    }
-                }
-            }
-
-            Containers.RemoveAll(x => x.BswmdPath == path && x.ShortName == shortName);
-            return Containers.FindAll(x => x.BswmdPath == path).Count;
-        }
-
-        public int DelContainer(string path)
-        {
-            foreach (var container in Containers)
-            {
-                if (container.BswmdPathShort == path)
-                {
-                    if (container is EcucInstanceContainer instanceContainer)
-                    {
-                        Manager.AsrPathAsrRawDict.Remove(instanceContainer.AsrPath);
-                        Manager.AsrRawAsrPathDict.Remove(instanceContainer);
-                        Model.SUBCONTAINERS.ECUCCONTAINERVALUE.Remove(instanceContainer.Model);
-                        IsDirty = true;
-
-                        if (container.Containers.Count > 0)
-                        {
-                            if (container is EcucInstanceContainer instanceContainer2)
-                            {
-                                instanceContainer2.DelContainer();
-                            }
-                        }
-                    }
-                }
-            }
-
-            Containers.RemoveAll(x => x.BswmdPath == path);
-            return Containers.FindAll(x => x.BswmdPath == path).Count;
-        }
-
-        public void DelContainer()
-        {
-            foreach (var container in Containers)
-            {
-                if (container is EcucInstanceContainer instanceContainer)
-                {
-                    Manager.AsrPathAsrRawDict.Remove(instanceContainer.AsrPath);
-                    Manager.AsrRawAsrPathDict.Remove(instanceContainer);
-                    Model.SUBCONTAINERS.ECUCCONTAINERVALUE.Remove(instanceContainer.Model);
-                    IsDirty = true;
-
-                    if (container.Containers.Count > 0)
-                    {
-                        if (container is EcucInstanceContainer instanceContainer2)
-                        {
-                            instanceContainer2.DelContainer();
-                        }
-                    }
-                }
-            }
-            Containers.RemoveAll(x => x.BswmdPath != "");
-        }
-
+        /// <param name="path"></param>
+        /// <param name="value"></param>
+        /// <param name="dest"></param>
+        /// <returns></returns>
         public EcucInstanceTextualParamValue AddTextualPara(string path, string value, string dest)
         {
-            var paraNew = new EcucInstanceTextualParamValue($"{BswmdPath}/{path}", dest, value, Manager, this);
-
-            if (Model.PARAMETERVALUES == null)
-            {
-                Model.PARAMETERVALUES = new ECUCCONTAINERVALUE.PARAMETERVALUESLocalType();
-            }
-            Model.PARAMETERVALUES.ECUCTEXTUALPARAMVALUE.Add(paraNew.Model);
-            Paras.Add(paraNew);
-            paraNew.IsDirty = true;
+            var textualParamValue = ModelLocal.AddNewParameterValueAsEcucTextualParamValue();
+            textualParamValue.DefinitionRef.Value = $"{BswmdPath}/{path}";
+            textualParamValue.DefinitionRef.DestType = EcucBswmdTypeConvert.BswmdToBswmdType(dest);
+            textualParamValue.Value = value ;
+            var paraNew = new EcucInstanceTextualParamValue(textualParamValue, Manager);
             return paraNew;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="value"></param>
         public void DelTextualPara(string path, string value)
         {
             var query = from para in Paras
@@ -1332,14 +1151,15 @@ namespace Ecuc.EcucBase.EInstance
             {
                 if (para is EcucInstanceTextualParamValue textualPara)
                 {
-                    Model.PARAMETERVALUES.ECUCTEXTUALPARAMVALUE.Remove(textualPara.Model);
-                    Manager.BswmdPathInstanceDict[para.BswmdPath].Remove(para);
-                    Paras.Remove(para);
-                    IsDirty = true;
+                    para.DeleteAndRemoveFromOwner();
                 }
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
         public void DelTextualPara(string path)
         {
             var query = from para in Paras
@@ -1350,27 +1170,33 @@ namespace Ecuc.EcucBase.EInstance
             {
                 if (para is EcucInstanceTextualParamValue textualPara)
                 {
-                    Model.PARAMETERVALUES.ECUCTEXTUALPARAMVALUE.Remove(textualPara.Model);
-                    Manager.BswmdPathInstanceDict[para.BswmdPath].Remove(para);
-                    Paras.Remove(para);
-                    IsDirty = true;
+                    para.DeleteAndRemoveFromOwner();
                 }
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="value"></param>
+        /// <param name="dest"></param>
+        /// <returns></returns>
         public EcucInstanceNumericalParamValue AddNumericalPara(string path, string value, string dest)
         {
-            var paraNew = new EcucInstanceNumericalParamValue($"{BswmdPath}/{path}", dest, value, Manager, this);
-            if (Model.PARAMETERVALUES == null)
-            {
-                Model.PARAMETERVALUES = new ECUCCONTAINERVALUE.PARAMETERVALUESLocalType();
-            }
-            Model.PARAMETERVALUES.ECUCNUMERICALPARAMVALUE.Add(paraNew.Model);
-            Paras.Add(paraNew);
-            paraNew.IsDirty = true;
+            var numericalParamValue = ModelLocal.AddNewParameterValueAsEcucNumericalParamValue();
+            numericalParamValue.DefinitionRef.Value = $"{BswmdPath}/{path}";
+            numericalParamValue.DefinitionRef.DestType = EcucBswmdTypeConvert.BswmdToBswmdType(dest);
+            numericalParamValue.Value.Value = value;
+            var paraNew = new EcucInstanceNumericalParamValue(numericalParamValue, Manager);
             return paraNew;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="value"></param>
         public void DelNumericalPara(string path, string value)
         {
             var query = from para in Paras
@@ -1381,14 +1207,15 @@ namespace Ecuc.EcucBase.EInstance
             {
                 if (para is EcucInstanceNumericalParamValue numericalPara)
                 {
-                    Model.PARAMETERVALUES.ECUCNUMERICALPARAMVALUE.Remove(numericalPara.Model);
-                    Manager.BswmdPathInstanceDict[para.BswmdPath].Remove(para);
-                    Paras.Remove(para);
-                    IsDirty = true;
+                    para.DeleteAndRemoveFromOwner();
                 }
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
         public void DelNumericalPara(string path)
         {
             var query = from para in Paras
@@ -1399,27 +1226,35 @@ namespace Ecuc.EcucBase.EInstance
             {
                 if (para is EcucInstanceNumericalParamValue numericalPara)
                 {
-                    Model.PARAMETERVALUES.ECUCNUMERICALPARAMVALUE.Remove(numericalPara.Model);
-                    Manager.BswmdPathInstanceDict[para.BswmdPath].Remove(para);
-                    Paras.Remove(para);
-                    IsDirty = true;
+                    para.DeleteAndRemoveFromOwner();
                 }
             }
         }
 
-        public EcucInstanceReferenceValue AddReference(string path, string defDest, string valueRef, string valueDest)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="defDest"></param>
+        /// <param name="valueRef"></param>
+        /// <param name="valueDest"></param>
+        /// <returns></returns>
+        public EcucInstanceReferenceValue AddReference(string path, ReferrableType defDest, string valueRef, ReferrableType valueDest)
         {
-            var refNew = new EcucInstanceReferenceValue($"{BswmdPath}/{path}", defDest, valueRef, valueDest, Manager, this);
-            if (Model.REFERENCEVALUES == null)
-            {
-                Model.REFERENCEVALUES = new ECUCCONTAINERVALUE.REFERENCEVALUESLocalType();
-            }
-            Model.REFERENCEVALUES.ECUCREFERENCEVALUE.Add(refNew.Model);
-            refNew.IsDirty = true;
-            Refs.Add(refNew);
-            return refNew;
+            var referenceValue = ModelLocal.AddNewReferenceValueAsEcucReferenceValue();
+            referenceValue.DefinitionRef.Value = $"{BswmdPath}/{path}";
+            referenceValue.DefinitionRef.DestType = defDest;
+            referenceValue.Value.DestType = valueDest;
+            referenceValue.Value.Value = valueRef;
+            var referenceNew = new EcucInstanceReferenceValue(referenceValue, Manager);
+            return referenceNew;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="valueRef"></param>
         public void DelReference(string path, string valueRef)
         {
             var query = from reference in Refs
@@ -1430,13 +1265,15 @@ namespace Ecuc.EcucBase.EInstance
             {
                 if (reference is EcucInstanceReferenceValue instanceReference)
                 {
-                    Model.REFERENCEVALUES.ECUCREFERENCEVALUE.Remove(instanceReference.Model);
-                    Refs.Remove(instanceReference);
-                    IsDirty = true;
+                    reference.DeleteAndRemoveFromOwner();
                 }
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
         public void DelReference(string path)
         {
             var query = from reference in Refs
@@ -1447,596 +1284,372 @@ namespace Ecuc.EcucBase.EInstance
             {
                 if (reference is EcucInstanceReferenceValue instanceReference)
                 {
-                    Model.REFERENCEVALUES.ECUCREFERENCEVALUE.Remove(instanceReference.Model);
-                    Refs.Remove(instanceReference);
-                    IsDirty = true;
+                    reference.DeleteAndRemoveFromOwner();
                 }
             }
         }
 
         /// <summary>
-        /// Update autosar path dictionary of container
+        /// 
         /// </summary>
-        /// <param name="newName">New short name of container</param>
-        public void UpdateAsrPathShort(string newName)
+        public void DeleteAndRemoveFromOwner()
         {
-            // Construct new autosar path
-            var asrPathOld = AsrPath;
-            var parts = AsrPath.Split("/");
-            parts[^1] = newName;
-            var asrPathNew = string.Join("/", parts);
+            ModelLocal.DeleteAndRemoveFromOwner();
+        }
+    }
 
-            // Check name duplication
-            if (Manager.AsrPathAsrRawDict.ContainsKey(asrPathNew))
+    /// <summary>
+    /// 
+    /// </summary>
+    public class EcucInstanceTextualParamValue : EcucInstanceBase, IEcucInstanceParameterBase
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public IEcucInstanceContainer Parent
+        {
+            get
             {
-                throw new Exception($"Already have continer with name {newName}");
-            }
-
-            // Update AsrPathAsrRawDict
-            Manager.AsrPathAsrRawDict[asrPathNew] = Manager.AsrPathAsrRawDict[asrPathOld];
-            Manager.AsrPathAsrRawDict.Remove(asrPathOld);
-            // Update AsrRawAsrPathDict
-            Manager.AsrRawAsrPathDict[Model] = asrPathNew;
-            // Update AsrPathInstanceDict
-            Manager.AsrPathInstanceDict[asrPathNew] = Manager.AsrPathInstanceDict[asrPathOld];
-            Manager.AsrPathInstanceDict.Remove(asrPathOld);
-
-            // Updata InstanceReferenceDict, change all reference point to container
-            try
-            {
-                var usage = (this as IEcucInstanceBase).GetReferenceByAsrPath(asrPathOld);
-                foreach (var u in usage)
+                if (ModelLocal.Parent is IEcucContainerValue container)
                 {
-                    u.ValueRef = asrPathNew;
+                    return new EcucInstanceContainer(container, Manager);
                 }
-                Manager.InstanceReferenceDict[asrPathNew] = Manager.InstanceReferenceDict[asrPathOld];
-                Manager.InstanceReferenceDict.Remove(asrPathOld);
+                throw new Exception($"Parent is not EcucContainerValue");
             }
-            catch
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public IEcucTextualParamValue ModelLocal
+        {
+            get
             {
-
-            }
-
-            foreach (var continer in Containers)
-            {
-                continer.UpdateAsrPathPrefix(asrPathNew);
+                if (Model is IEcucTextualParamValue ecucTextualParam)
+                {
+                    return ecucTextualParam;
+                }
+                else
+                {
+                    throw new Exception("Invalid model type");
+                }
             }
         }
 
         /// <summary>
-        /// Update autosar path prefix of container.
-        /// The prefix may be changed by parent container shortname changed.
+        /// 
         /// </summary>
-        /// <param name="newName">New short name of container</param>
-        public void UpdateAsrPathPrefix(string newName)
-        {
-            // Construct new autosar path
-            var asrPathOld = AsrPath;
-            var parts = AsrPath.Split("/");
-            var asrPathNew = $"{newName}/{parts[^1]}";
-
-            // Check name duplication
-            if (Manager.AsrPathAsrRawDict.ContainsKey(asrPathNew))
-            {
-                throw new Exception($"Already have continer with name {newName}");
-            }
-
-            // Update AsrPathAsrRawDict
-            Manager.AsrPathAsrRawDict[asrPathNew] = Manager.AsrPathAsrRawDict[asrPathOld];
-            Manager.AsrPathAsrRawDict.Remove(asrPathOld);
-            // Update AsrRawAsrPathDict
-            Manager.AsrRawAsrPathDict[Model] = asrPathNew;
-            // Update AsrPathInstanceDict
-            Manager.AsrPathInstanceDict[asrPathNew] = Manager.AsrPathInstanceDict[asrPathOld];
-            Manager.AsrPathInstanceDict.Remove(asrPathOld);
-
-            // Updata InstanceReferenceDict, change all reference point to container
-            try
-            {
-                var usage = (this as IEcucInstanceBase).GetReferenceByAsrPath(asrPathOld);
-                foreach (var u in usage)
-                {
-                    u.ValueRef = asrPathNew;
-                }
-                Manager.InstanceReferenceDict[asrPathNew] = Manager.InstanceReferenceDict[asrPathOld];
-                Manager.InstanceReferenceDict.Remove(asrPathOld);
-            }
-            catch
-            {
-
-            }
-
-            foreach (var continer in Containers)
-            {
-                continer.UpdateAsrPathPrefix(asrPathNew);
-            }
-        }
-
-        private void ValidChangedEventHandler(object? sender, PropertyChangedEventArgs e)
-        {
-            Parent.Valid.RaisePropertyChanged(nameof(Valid));
-            RaisePropertyChanged(nameof(Valid));
-        }
-    }
-
-    public class EcucInstanceTextualParamValue : NotifyPropertyChangedBase, IEcucInstanceParam
-    {
-        public ECUCTEXTUALPARAMVALUE Model { get; }
-        public EcucInstanceManager Manager { get; }
-        public IEcucInstanceModule Parent { get; }
-        public EcucValid Valid { get; set; }
-
-        private bool isDirty = false;
-
-        public bool IsDirty
-        {
-            get
-            {
-                return isDirty;
-            }
-            set
-            {
-                if (value != IsDirty)
-                {
-                    isDirty = value;
-                    if (value == true)
-                    {
-                        Parent.IsDirty = true;
-                    }
-                }
-            }
-        }
-
-        public string BswmdPath
-        {
-            get
-            {
-                return Model.DEFINITIONREF.TypedValue;
-            }
-            set
-            {
-                if (value == null)
-                {
-                    return;
-                }
-                if (BswmdPath == value)
-                {
-                    return;
-                }
-                Model.DEFINITIONREF.TypedValue = value;
-            }
-        }
-
         public string Value
         {
             get
             {
-                try
+                if (ModelLocal.ValueSpecified)
                 {
-                    return Model.VALUE.TypedValue;
+                    return ModelLocal.Value;
                 }
-                catch
-                {
-                    return "";
-                }
+                return "";
             }
             set
             {
-                if (value == null)
+                if ((value != null) && (Value != value))
                 {
-                    return;
+                    ModelLocal.Value = value;
                 }
-                if (Value == value)
-                {
-                    return;
-                }
-                Model.VALUE.TypedValue = value;
-                IsDirty = true;
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public string Dest
         {
             get
             {
-                return Model.DEFINITIONREF.DEST;
+                if (ModelLocal.DefinitionRefSpecified)
+                {
+                    return ModelLocal.DefinitionRef.DestType.ToString();
+                }
+                return "";
             }
             set
             {
-                if (value == null)
+                if ((value != null) && (Dest != value))
                 {
-                    return;
+                    ModelLocal.DefinitionRef.DestType = EcucBswmdTypeConvert.BswmdToBswmdType(value);
                 }
-                if (Dest == value)
-                {
-                    return;
-                }
-                Model.DEFINITIONREF.DEST = value;
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public List<string> Comment
         {
             get
             {
                 var result = new List<string>();
-                foreach (var anno in Model.ANNOTATIONS.ANNOTATION)
+                foreach (var anno in ModelLocal.AnnotationList)
                 {
-                    result.Add(anno.ANNOTATIONORIGIN.TypedValue);
+                    if (anno.AnnotationOriginSpecified)
+                    {
+                        result.Add(anno.AnnotationOrigin);
+                    }
                 }
                 return result;
             }
             set
             {
-                Model.ANNOTATIONS.ANNOTATION = new List<ANNOTATION>();
-                foreach (var comment in value)
+                var annos = ModelLocal.AnnotationList.ToArray();
+
+                foreach (var anno in annos)
                 {
-                    Model.ANNOTATIONS.ANNOTATION.Add
-                    (
-                        new ANNOTATION
-                        {
-                            ANNOTATIONORIGIN = new STRING
-                            {
-                                TypedValue = comment
-                            }
-                        }
-                    );
+                    ModelLocal.RemoveAnnotation(anno);
+                }
+
+                foreach (var a in Comment)
+                {
+                    var newAnno = ModelLocal.AddNewAnnotation();
+                    newAnno.AnnotationOriginSpecified = true;
+                    newAnno.AnnotationOrigin = a;
                 }
             }
         }
 
-        public EcucInstanceTextualParamValue(string bswmdPath, string dest, string value, EcucInstanceManager manager, IEcucInstanceModule parent)
-        {
-            Model = new ECUCTEXTUALPARAMVALUE
-            {
-                VALUE = new VERBATIMSTRING
-                {
-                    TypedValue = value
-                },
-                DEFINITIONREF = new ECUCTEXTUALPARAMVALUE.DEFINITIONREFLocalType
-                {
-                    TypedValue = bswmdPath,
-                    DEST = dest
-                },
-            };
-            Manager = manager;
-            Parent = parent;
-            IsDirty = parent.IsDirty;
-            Valid = new EcucValid(this);
-            Valid.PropertyChanged += ValidChangedEventHandler;
-
-            Register();
-        }
-
-        public EcucInstanceTextualParamValue(ECUCTEXTUALPARAMVALUE model, EcucInstanceManager manager, IEcucInstanceModule parent)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="manager"></param>
+        /// <param name="parent"></param>
+        public EcucInstanceTextualParamValue(IEcucTextualParamValue model, EcucInstanceManager manager)
+            :base(model, manager)
         {
             Model = model;
-            Manager = manager;
-            Parent = parent;
-            IsDirty = parent.IsDirty;
-            Valid = new EcucValid(this);
-            Valid.PropertyChanged += ValidChangedEventHandler;
-
-            Register();
         }
 
-        private void Register()
+        /// <summary>
+        /// 
+        /// </summary>
+        public void DeleteAndRemoveFromOwner()
         {
-            Monitor.Enter(Manager.BswmdPathInstanceDict);
-            try
-            {
-                if (Manager.BswmdPathInstanceDict.ContainsKey(BswmdPath))
-                {
-                    Manager.BswmdPathInstanceDict[BswmdPath].Add(this);
-                }
-                else
-                {
-                    Manager.BswmdPathInstanceDict[BswmdPath] = new List<IEcucInstanceBase>() { this };
-                }
-            }
-            finally
-            {
-                Monitor.Exit(Manager.BswmdPathInstanceDict);
-            }
-        }
-
-        private void ValidChangedEventHandler(object? sender, PropertyChangedEventArgs e)
-        {
-            Parent.Valid.RaisePropertyChanged(nameof(Valid));
-            RaisePropertyChanged(nameof(Valid));
+            ModelLocal.DeleteAndRemoveFromOwner();
         }
     }
 
-    public class EcucInstanceNumericalParamValue : NotifyPropertyChangedBase, IEcucInstanceParam
+    /// <summary>
+    /// 
+    /// </summary>
+    public class EcucInstanceNumericalParamValue : EcucInstanceBase, IEcucInstanceParameterBase
     {
-        public ECUCNUMERICALPARAMVALUE Model { get; }
-        public EcucInstanceManager Manager { get; }
-        public IEcucInstanceModule Parent { get; }
-        public EcucValid Valid { get; set; }
-
-        private bool isDirty = false;
-
-        public bool IsDirty
+        /// <summary>
+        /// 
+        /// </summary>
+        public IEcucInstanceContainer Parent
         {
             get
             {
-                return isDirty;
-            }
-            set
-            {
-                if (value != IsDirty)
+                if (ModelLocal.Parent is IEcucContainerValue container)
                 {
-                    isDirty = value;
-                    if (value == true)
-                    {
-                        Parent.IsDirty = true;
-                    }
+                    return new EcucInstanceContainer(container, Manager);
+                }
+                throw new Exception($"Parent is not EcucContainerValue");
+            }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public IEcucNumericalParamValue ModelLocal
+        {
+            get
+            {
+                if (Model is IEcucNumericalParamValue ecucNumericalParam)
+                {
+                    return ecucNumericalParam;
+                }
+                else
+                {
+                    throw new Exception("Invalid model type");
                 }
             }
         }
 
-        public string BswmdPath
-        {
-            get
-            {
-                return Model.DEFINITIONREF.TypedValue;
-            }
-            set
-            {
-                if (value == null)
-                {
-                    return;
-                }
-                if (BswmdPath == value)
-                {
-                    return;
-                }
-                Model.DEFINITIONREF.TypedValue = value;
-            }
-        }
-
+        /// <summary>
+        /// 
+        /// </summary>
         public string Value
         {
             get
             {
-                try
+                if (ModelLocal.ValueSpecified)
                 {
-                    return Model.VALUE.Untyped.Value;
+                    return ModelLocal.Value.Value;
                 }
-                catch
-                {
-                    return "0";
-                }
+                return "";
             }
             set
             {
-                if (value == null)
+                if ((value != null) && (Value == value))
                 {
-                    return;
+                    ModelLocal.Value.Value = value;
                 }
-                if (Value == value)
-                {
-                    return;
-                }
-                Model.VALUE.Untyped.Value = value;
-                IsDirty = true;
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public string Dest
         {
             get
             {
-                return Model.DEFINITIONREF.DEST;
+                if (Model.DefinitionRefSpecified)
+                {
+                    return Model.DefinitionRef.DestType.ToString();
+                }
+                return "";
             }
             set
             {
-                if (value == null)
+                if ((value != null) && (Dest != value))
                 {
-                    return;
+                    Model.DefinitionRef.DestType = EcucBswmdTypeConvert.BswmdToBswmdType(value);
                 }
-                if (Dest == value)
-                {
-                    return;
-                }
-                Model.DEFINITIONREF.DEST = value;
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public List<string> Comment
         {
             get
             {
                 var result = new List<string>();
-                foreach (var anno in Model.ANNOTATIONS.ANNOTATION)
+                foreach (var anno in ModelLocal.AnnotationList)
                 {
-                    result.Add(anno.ANNOTATIONORIGIN.TypedValue);
+                    if (anno.AnnotationOriginSpecified)
+                    {
+                        result.Add(anno.AnnotationOrigin);
+                    }
                 }
                 return result;
             }
             set
             {
-                Model.ANNOTATIONS.ANNOTATION = new List<ANNOTATION>();
-                foreach (var comment in value)
+                var annos = ModelLocal.AnnotationList.ToArray();
+
+                foreach (var anno in annos)
                 {
-                    Model.ANNOTATIONS.ANNOTATION.Add
-                    (
-                        new ANNOTATION
-                        {
-                            ANNOTATIONORIGIN = new STRING
-                            {
-                                TypedValue = comment
-                            }
-                        }
-                    );
+                    ModelLocal.RemoveAnnotation(anno);
+                }
+
+                foreach (var a in Comment)
+                {
+                    var newAnno = ModelLocal.AddNewAnnotation();
+                    newAnno.AnnotationOriginSpecified = true;
+                    newAnno.AnnotationOrigin = a;
                 }
             }
         }
 
-        public EcucInstanceNumericalParamValue(string bswmdPath, string dest, string value, EcucInstanceManager manager, IEcucInstanceModule parent)
-        {
-            Model = new ECUCNUMERICALPARAMVALUE
-            {
-                VALUE = new NUMERICALVALUEVARIATIONPOINT(),
-                DEFINITIONREF = new ECUCNUMERICALPARAMVALUE.DEFINITIONREFLocalType
-                {
-                    TypedValue = bswmdPath,
-                    DEST = dest
-                }
-            };
-            Model.VALUE.Untyped.Value = value;
-            Manager = manager;
-            Parent = parent;
-            IsDirty = parent.IsDirty;
-            Valid = new EcucValid(this);
-            Valid.PropertyChanged += ValidChangedEventHandler;
-
-            Register();
-        }
-
-        public EcucInstanceNumericalParamValue(ECUCNUMERICALPARAMVALUE model, EcucInstanceManager manager, IEcucInstanceModule parent)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="manager"></param>
+        /// <param name="parent"></param>
+        public EcucInstanceNumericalParamValue(IEcucNumericalParamValue model, EcucInstanceManager manager)
+            :base(model, manager)
         {
             Model = model;
-            Manager = manager;
-            Parent = parent;
-            IsDirty = parent.IsDirty;
-            Valid = new EcucValid(this);
-            Valid.PropertyChanged += ValidChangedEventHandler;
-
-            Register();
         }
 
-        private void Register()
+        /// <summary>
+        /// 
+        /// </summary>
+        public void DeleteAndRemoveFromOwner()
         {
-            Monitor.Enter(Manager.BswmdPathInstanceDict);
-            try
-            {
-                if (Manager.BswmdPathInstanceDict.ContainsKey(BswmdPath))
-                {
-                    Manager.BswmdPathInstanceDict[BswmdPath].Add(this);
-                }
-                else
-                {
-                    Manager.BswmdPathInstanceDict[BswmdPath] = new List<IEcucInstanceBase>() { this };
-                }
-            }
-            finally
-            {
-                Monitor.Exit(Manager.BswmdPathInstanceDict);
-            }
-        }
-
-        private void ValidChangedEventHandler(object? sender, PropertyChangedEventArgs e)
-        {
-            Parent.Valid.RaisePropertyChanged(nameof(Valid));
-            RaisePropertyChanged(nameof(Valid));
+            ModelLocal.DeleteAndRemoveFromOwner();
         }
     }
 
-    public class EcucInstanceReferenceValue : NotifyPropertyChangedBase, IEcucInstanceReference
+    /// <summary>
+    /// 
+    /// </summary>
+    public class EcucInstanceReferenceValue : EcucInstanceBase, IEcucInstanceReferenceBase
     {
-        public ECUCREFERENCEVALUE Model { get; }
-        public EcucInstanceManager Manager { get; }
-        public IEcucInstanceModule Parent { get; }
-        public EcucValid Valid { get; set; }
-
-        private bool isDirty = false;
-
-        public bool IsDirty
+        /// <summary>
+        /// 
+        /// </summary>
+        public IEcucInstanceContainer Parent
         {
             get
             {
-                return isDirty;
-            }
-            set
-            {
-                if (value != IsDirty)
+                if (ModelLocal.Parent is IEcucContainerValue container)
                 {
-                    isDirty = value;
-                    if (value == true)
-                    {
-                        Parent.IsDirty = true;
-                    }
+                    return new EcucInstanceContainer(container, Manager);
+                }
+                throw new Exception($"Parent is not EcucContainerValue");
+            }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        public IEcucReferenceValue ModelLocal
+        {
+            get
+            {
+                if (Model is IEcucReferenceValue ecucReference)
+                {
+                    return ecucReference;
+                }
+                else
+                {
+                    throw new Exception("Invalid model type");
                 }
             }
         }
 
-        public string BswmdPath
-        {
-            get
-            {
-                return Model.DEFINITIONREF.TypedValue;
-            }
-        }
-
-        public string DefDest
-        {
-            get
-            {
-                return Model.VALUEREF.DEST;
-            }
-            set
-            {
-                if (value == null)
-                {
-                    return;
-                }
-                if (DefDest == value)
-                {
-                    return;
-                }
-
-                Model.VALUEREF.DEST = value;
-            }
-        }
-
+        /// <summary>
+        /// 
+        /// </summary>
         public string ValueRef
         {
             get
             {
-                if (Model.VALUEREF != null)
+                if (ModelLocal.ValueSpecified)
                 {
-                    return Model.VALUEREF.TypedValue;
+                    return ModelLocal.Value.Value;
                 }
-                else
-                {
-                    return "";
-                }
+                return "";
             }
             set
             {
-                if (value == null)
+                if ((value != null) && (ValueRef != value))
                 {
-                    return;
+                    ModelLocal.Value.Value = value;
                 }
-                if (ValueRef == value)
-                {
-                    return;
-                }
-
-                Model.VALUEREF.TypedValue = value;
-                IsDirty = true;
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public string ValueDest
         {
             get
             {
-                return Model.VALUEREF.DEST;
+                if (ModelLocal.ValueSpecified)
+                {
+                    ModelLocal.Value.DestType.ToString();
+                }
+                return "";
             }
             set
             {
-                if (value == null)
+                if ((value != null) && (DefDest != value))
                 {
-                    return;
+                    ModelLocal.Value.DestType = EcucBswmdTypeConvert.BswmdToBswmdType(value); ;
                 }
-                if (ValueDest == value)
-                {
-                    return;
-                }
-
-                Model.VALUEREF.DEST = value;
             }
         }
 
@@ -2045,122 +1658,51 @@ namespace Ecuc.EcucBase.EInstance
             get
             {
                 var result = new List<string>();
-                foreach (var anno in Model.ANNOTATIONS.ANNOTATION)
+                foreach (var anno in ModelLocal.AnnotationList)
                 {
-                    result.Add(anno.ANNOTATIONORIGIN.TypedValue);
+                    if (anno.AnnotationOriginSpecified)
+                    {
+                        result.Add(anno.AnnotationOrigin);
+                    }
                 }
                 return result;
             }
             set
             {
-                Model.ANNOTATIONS.ANNOTATION = new List<ANNOTATION>();
-                foreach (var comment in value)
+                var annos = ModelLocal.AnnotationList.ToArray();
+
+                foreach (var anno in annos)
                 {
-                    Model.ANNOTATIONS.ANNOTATION.Add
-                    (
-                        new ANNOTATION
-                        {
-                            ANNOTATIONORIGIN = new STRING
-                            {
-                                TypedValue = comment
-                            }
-                        }
-                    );
+                    ModelLocal.RemoveAnnotation(anno);
+                }
+
+                foreach (var a in Comment)
+                {
+                    var newAnno = ModelLocal.AddNewAnnotation();
+                    newAnno.AnnotationOriginSpecified = true;
+                    newAnno.AnnotationOrigin = a;
                 }
             }
         }
 
-        public EcucInstanceReferenceValue(string bswmdPath, string defDest, string valueRef, string valueDest, EcucInstanceManager manager, IEcucInstanceModule parent)
-        {
-            valueDest = valueDest switch
-            {
-                "ECUC-PARAM-CONF-CONTAINER-DEF" => "ECUC-CONTAINER-VALUE",
-                "ECUC-ENUMERATION-PARAM-DEF" => "ECUC-TEXTUAL-PARAM-VALUE",
-                "ECUC-INTEGER-PARAM-DEF" => "ECUC-NUMERICAL-PARAM-VALUE",
-                "ECUC-BOOLEAN-PARAM-DEF" => "ECUC-NUMERICAL-PARAM-VALUE",
-                "ECUC-FLOAT-PARAM-DEF" => "ECUC-NUMERICAL-PARAM-VALUE",
-                "ECUC-STRING-PARAM-DEF" => "ECUC-TEXTUAL-PARAM-VALUE",
-                "ECUC-FUNCTION-NAME-DEF" => "ECUC-TEXTUAL-PARAM-VALUE",
-                "ECUC-REFERENCE-DEF" => "ECUC-REFERENCE-VALUE",
-                "ECUC-FOREIGN-REFERENCE-DEF" => "ECUC-REFERENCE-VALUE",
-                "ECUC-SYMBOLIC-NAME-REFERENCE-DEF" => "ECUC-REFERENCE-VALUE",
-                _ => throw new NotImplementedException(),
-            };
-            Model = new ECUCREFERENCEVALUE
-            {
-                DEFINITIONREF = new ECUCREFERENCEVALUE.DEFINITIONREFLocalType
-                {
-                    TypedValue = bswmdPath,
-                    DEST = defDest
-                },
-                VALUEREF = new ECUCREFERENCEVALUE.VALUEREFLocalType
-                {
-                    TypedValue = valueRef,
-                    DEST = valueDest
-                }
-            };
-            Manager = manager;
-            Parent = parent;
-            IsDirty = parent.IsDirty;
-            Valid = new EcucValid(this);
-            Valid.PropertyChanged += ValidChangedEventHandler;
-
-            Register();
-        }
-
-        public EcucInstanceReferenceValue(ECUCREFERENCEVALUE model, EcucInstanceManager manager, IEcucInstanceModule parent)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="manager"></param>
+        /// <param name="parent"></param>
+        public EcucInstanceReferenceValue(IEcucReferenceValue model, EcucInstanceManager manager)
+            :base(model, manager)
         {
             Model = model;
-            Manager = manager;
-            Parent = parent;
-            IsDirty = parent.IsDirty;
-            Valid = new EcucValid(this);
-            Valid.PropertyChanged += ValidChangedEventHandler;
-
-            Register();
         }
 
-        private void Register()
+        /// <summary>
+        /// 
+        /// </summary>
+        public void DeleteAndRemoveFromOwner()
         {
-            Monitor.Enter(Manager.BswmdPathInstanceDict);
-            try
-            {
-                if (Manager.BswmdPathInstanceDict.ContainsKey(BswmdPath))
-                {
-                    Manager.BswmdPathInstanceDict[BswmdPath].Add(this);
-                }
-                else
-                {
-                    Manager.BswmdPathInstanceDict[BswmdPath] = new List<IEcucInstanceBase>() { this };
-                }
-            }
-            finally
-            {
-                Monitor.Exit(Manager.BswmdPathInstanceDict);
-            }
-
-            Monitor.Enter(Manager.InstanceReferenceDict);
-            try
-            {
-                if (Manager.InstanceReferenceDict.ContainsKey(ValueRef))
-                {
-                    Manager.InstanceReferenceDict[ValueRef].Add(this);
-                }
-                else
-                {
-                    Manager.InstanceReferenceDict[ValueRef] = new List<IEcucInstanceReference>() { this };
-                }
-            }
-            finally
-            {
-                Monitor.Exit(Manager.InstanceReferenceDict);
-            }
-        }
-
-        private void ValidChangedEventHandler(object? sender, PropertyChangedEventArgs e)
-        {
-            Parent.Valid.RaisePropertyChanged(nameof(Valid));
-            RaisePropertyChanged(nameof(Valid));
+            ModelLocal.DeleteAndRemoveFromOwner();
         }
     }
 }

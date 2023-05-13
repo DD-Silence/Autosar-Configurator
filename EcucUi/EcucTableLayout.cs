@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2023 DJS Studio E-mail:ddsilence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -70,10 +70,6 @@ namespace Ecuc.EcucUi
         /// DeRef menu item for reference lookup.
         /// </summary>
         private readonly ToolStripMenuItem cmDeRef;
-        /// <summary>
-        /// Valid tooltip.
-        /// </summary>
-        private readonly ToolTip ttValid;
 
         /// <summary>
         /// Initialize EcucTableLayout.
@@ -129,8 +125,6 @@ namespace Ecuc.EcucUi
             cmDeRef.Text = "Find Reference";
             cmDeRef.Visible = false;
             ContextMenuStrip = cm;
-
-            ttValid = new ToolTip();
         }
 
         /// <summary>
@@ -293,8 +287,8 @@ namespace Ecuc.EcucUi
                 Tag = data,
                 Name = "ShortName",
                 Enabled = true,
+                Width = data.Value.Length * 8 + 20 > Width / 2 ? data.Value.Length * 8 + 20 : Width / 2
             };
-            tb.Width = data.Value.Length * 8 + 20 > Width / 2 ? data.Value.Length * 8 + 20 : Width / 2;
             tb.DataBindings.Add(new Binding("Text", data, "Value"));
             Controls.Add(tb);
         }
@@ -310,16 +304,11 @@ namespace Ecuc.EcucUi
             {
                 AutoSize = true,
                 Text = ui.Title,
-                ForeColor = ui.Datas.ValidStatus ? Color.Black : Color.Red,
                 Tag = ui,
                 Enabled = ui.Exist,
                 Name = $"lb_{ui.Title}"
             };
             lb.MouseDown += ChildMouseDownEventHandler;
-            if (ui.Datas.ValidStatus == false)
-            {
-                ttValid.SetToolTip(lb, ui.Datas.ValidInfo);
-            }
             Controls.Add(lb);
 
             // Differnet kind of control for content of parameter
@@ -424,7 +413,8 @@ namespace Ecuc.EcucUi
                             {
                                 View = View.Details,
                                 AutoArrange = true,
-                                Enabled = ui.Exist
+                                Enabled = ui.Exist,
+                                Name = ui.Title
                             };
 
                             lv.MouseDown += ChildMouseDownEventHandler;
@@ -450,16 +440,11 @@ namespace Ecuc.EcucUi
             {
                 AutoSize = true,
                 Text = ui.Title,
-                ForeColor = ui.Datas.ValidStatus ? Color.Black : Color.Red,
                 Tag = ui,
                 Enabled = ui.Exist,
                 Name = $"lb_{ui.Title}"
             };
             lb.MouseDown += ChildMouseDownEventHandler;
-            if (ui.Datas.ValidStatus == false)
-            {
-                ttValid.SetToolTip(lb, ui.Datas.ValidInfo);
-            }
             Controls.Add(lb);
 
             // Different control for different type of reference
@@ -571,11 +556,6 @@ namespace Ecuc.EcucUi
                 // Update label
                 ctrl.Tag = ui;
                 ctrl.Enabled = ui.Exist;
-                ctrl.ForeColor = ui.Datas.ValidStatus ? Color.Black : Color.Red;
-                if (ui.Datas.ValidStatus == false)
-                {
-                    ttValid.SetToolTip(ctrl, ui.Datas.ValidInfo);
-                }
             }
             else
             {
@@ -686,11 +666,6 @@ namespace Ecuc.EcucUi
                 // Update label
                 ctrl.Tag = ui;
                 ctrl.Enabled = ui.Exist;
-                ctrl.ForeColor = ui.Datas.ValidStatus ? Color.Black : Color.Red;
-                if (ui.Datas.ValidStatus == false)
-                {
-                    ttValid.SetToolTip(ctrl, ui.Datas.ValidInfo);
-                }
             }
             else
             {
@@ -852,20 +827,14 @@ namespace Ecuc.EcucUi
                     if (name == node.Name)
                     {
                         node.TreeView.SelectedNode = node;
-                        if (node.Parent != null)
-                        {
-                            node.Parent.Expand();
-                        }
+                        node.Parent?.Expand();
                         return true;
                     }
                     else
                     {
                         if (ExpandAllNodes(node.Nodes, name) == true)
                         {
-                            if (node.Parent != null)
-                            {
-                                node.Parent.Expand();
-                            }
+                            node.Parent?.Expand();
                         }
                     }
                 }
@@ -1064,8 +1033,8 @@ namespace Ecuc.EcucUi
                 if (e.KeyCode == Keys.Enter)
                 {
                     // Enter is pressed, change filter
-                    Control ctrlGrid = Controls["DATAGRID"];
-                    Control ctrlText = Controls["DATAGRIDFILTER"];
+                    Control? ctrlGrid = Controls["DATAGRID"];
+                    Control? ctrlText = Controls["DATAGRIDFILTER"];
                     if (ctrlGrid == null || ctrlText == null)
                     {
                         return;

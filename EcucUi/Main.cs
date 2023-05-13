@@ -2,7 +2,7 @@
  *  This file is a part of Autosar Configurator for ECU GUI based 
  *  configuration, checking and code generation.
  *  
- *  Copyright (C) 2021-2022 DJS Studio E-mail:DD-Silence@sina.cn
+ *  Copyright (C) 2021-2023 DJS Studio E-mail:ddsilence@sina.cn
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
  */
 
 using System.Configuration;
-using CSScriptLib;
 using Ecuc.EcucBase.EBswmd;
 using Ecuc.EcucBase.EInstance;
 using Ecuc.EcucUi;
@@ -150,12 +149,11 @@ namespace AutosarConfigurator
             {
                 tpValue.AddTreeNodes(tvModel.Nodes[0].Nodes);
             }
-            mnScript.DropDownItems.Clear();
             CreateValidationTreeView();
 #if DEBUG
-            CreateScriptMenu("../../../../data/script", mnScript.DropDownItems);
+            //CreateScriptMenu("../../../../data/script", mnScript.DropDownItems);
 #else
-            CreateScriptMenu("data/script", mnScript.DropDownItems);
+            //CreateScriptMenu("data/script", mnScript.DropDownItems);
 #endif
         }
 
@@ -379,10 +377,7 @@ namespace AutosarConfigurator
         /// <param name="e">Not used</param>
         private void MnSave_Click(object sender, EventArgs e)
         {
-            if (instanceManager != null)
-            {
-                instanceManager.Save();
-            }
+            instanceManager?.Save();
         }
 
         /// <summary>
@@ -416,13 +411,10 @@ namespace AutosarConfigurator
             {
                 if (item.Tag is string file)
                 {
-                    CSScript.CacheEnabled = false;
-                    dynamic script = CSScript.Evaluator.LoadFile(file);
                     Console.WriteLine($"Start to execute script {file}");
                     try
                     {
                         GC.Collect();
-                        script.ScriptRun(bswmdManager, instanceManager);
                         Console.WriteLine($"Script {file} execute sucessfully");
                     }
                     catch (Exception ex)
